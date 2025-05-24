@@ -39,11 +39,11 @@ class AmbientDataset(Dataset):
             waveform = torch.nn.functional.pad(waveform, (0, padding))
         return waveform
 
-duration = 4  # seconds
+duration = 8  # seconds
 sample_rate = 16000
 output_size = int(sample_rate * duration)
 
-dataset = AmbientDataset("training-samples", sample_rate=sample_rate, duration=duration)
+dataset = AmbientDataset("training-samples/split", sample_rate=sample_rate, duration=duration)
 loader = DataLoader(dataset, batch_size=16, shuffle=True)
 
 class Generator(nn.Module):
