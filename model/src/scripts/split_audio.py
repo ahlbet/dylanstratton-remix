@@ -1,5 +1,4 @@
 import os
-
 from pydub import AudioSegment
 
 
@@ -26,6 +25,11 @@ def split_all_wavs(input_dir, output_dir, chunk_length_ms=5000):
                 print(f"  Saved: {chunk_filename}")
 
 
-input_file = "data/processed"
-output_dir = "data/processed/split"
-split_all_wavs(input_file, output_dir, 5000)
+def main():
+    input_file = "data/processed"
+    output_dir = "data/processed/split"
+    split_all_wavs(input_file, output_dir, 5000)
+
+
+if __name__ == "__main__":
+    main()

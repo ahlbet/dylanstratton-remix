@@ -9,10 +9,10 @@ setup(
         # add your requirements here
     ],
     entry_points={
-        'console_scripts': [
-            'train=model.training:main',
-            'generate=model.generate_audio:main',
-            'preprocess=model.preprocess_audio:main',
+        "console_scripts": [
+            "train=scripts.training:main",
+            "generate=scripts.generate_audio:main",
+            "preprocess=scripts.preprocess_audio:main",
         ],
-    }
+    },
 )

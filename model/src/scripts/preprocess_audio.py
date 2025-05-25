@@ -11,17 +11,18 @@ Template Audio Preprocessing Script
 - Saves to OUTPUT_DIR
 """
 
-import os
 from pathlib import Path
 
 import numpy as np
 import librosa
 import soundfile as sf
-from scipy.signal import butter, filtfilt, sosfiltfilt
+from scipy.signal import butter, sosfiltfilt
+import subprocess
+import sys
 
 # ——— Config ———
-INPUT_DIR = Path("data_raw")
-OUTPUT_DIR = Path("data_processed")
+INPUT_DIR = Path("data/raw")
+OUTPUT_DIR = Path("data/processed")
 SAMPLE_RATE = 16000
 TARGET_DURATION = 30.0  # seconds per clip
 TARGET_LEN = int(SAMPLE_RATE * TARGET_DURATION)
@@ -157,6 +158,31 @@ def main():
             sf.write(aug_out, aug_audio, SAMPLE_RATE)
 
         print(f"Processed {wav_path.name}: cleaned + {N_AUG} augmentations saved.")
+
+    # Split audio into chunks
+    # Split audio into chunks using the split_audio script
+
+    # Find the split_audio script in the same directory
+    script_dir = Path(__file__).parent
+    split_audio_script = script_dir / "split_audio.py"
+
+    if split_audio_script.exists():
+        print(f"Running split_audio script from {split_audio_script}")
+        # Run the split_audio script with appropriate arguments
+        subprocess.run(
+            [
+                sys.executable,
+                str(split_audio_script),
+                "--input",
+                str(OUTPUT_DIR),
+                "--output",
+                str(OUTPUT_DIR / "split"),
+                "--chunk-length",
+                "5000",
+            ]
+        )
+    else:
+        print(f"Error: Could not find split_audio script at {split_audio_script}")
 
 
 if __name__ == "__main__":
