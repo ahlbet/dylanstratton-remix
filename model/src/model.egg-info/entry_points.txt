@@ -1,4 +1,4 @@
 [console_scripts]
 generate = scripts.generate_audio:main
 preprocess = scripts.preprocess_audio:main
-train = scripts.training:main
+train = scripts.train:main

@@ -3,6 +3,7 @@ import torch
 
 # Audio settings
 SAMPLE_RATE = 16000  # Hz
+SEQ_LEN = SAMPLE_RATE * 4  # 4 seconds
 
 # Training hyperparameters
 LATENT_DIM = 100
@@ -20,7 +21,7 @@ CURRICULUM = [
 
 # Paths
 RAW_DATA_DIR = "data/raw"
-PROCESSED_DATA_DIR = "data/processed"
+PROCESSED_DATA_DIR = "data/processed/split"
 CHECKPOINT_DIR = "checkpoints"
 GENERATED_DIR = "generated"
 

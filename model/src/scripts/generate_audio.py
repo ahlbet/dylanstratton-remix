@@ -2,9 +2,9 @@
 import os
 import torch
 import torchaudio
-from src.model import build_generator_for
-from src.utils import find_latest_checkpoint
-from src.config import SAMPLE_RATE, LATENT_DIM, CHECKPOINT_DIR, DEVICE, GENERATED_DIR
+from model import build_generator_for
+from utils import find_latest_checkpoint
+from config import SAMPLE_RATE, LATENT_DIM, CHECKPOINT_DIR, DEVICE, GENERATED_DIR
 
 
 def main(duration_s=4):

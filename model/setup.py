@@ -10,7 +10,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "train=scripts.training:main",
+            "train=scripts.train:main",
             "generate=scripts.generate_audio:main",
             "preprocess=scripts.preprocess_audio:main",
         ],
