@@ -20,30 +20,32 @@ import soundfile as sf
 from scipy.signal import butter, filtfilt, sosfiltfilt
 
 # ——— Config ———
-INPUT_DIR       = Path("data_raw")
-OUTPUT_DIR      = Path("data_processed")
-SAMPLE_RATE     = 16000
-TARGET_DURATION = 30.0            # seconds per clip
-TARGET_LEN      = int(SAMPLE_RATE * TARGET_DURATION)
-N_AUG           = 1              # augmentations per source file
+INPUT_DIR = Path("data_raw")
+OUTPUT_DIR = Path("data_processed")
+SAMPLE_RATE = 16000
+TARGET_DURATION = 30.0  # seconds per clip
+TARGET_LEN = int(SAMPLE_RATE * TARGET_DURATION)
+N_AUG = 1  # augmentations per source file
 
 # Augmentation parameters
-TIME_STRETCH_RANGE = (0.8, 1.2)     # +/-10%
-PITCH_SHIFT_STEPS  = (-12, 12)        # semitones
-NOISE_LEVEL        = 0.01           # relative amplitude
+TIME_STRETCH_RANGE = (0.8, 1.2)  # +/-10%
+PITCH_SHIFT_STEPS = (-12, 12)  # semitones
+NOISE_LEVEL = 0.01  # relative amplitude
+
 
 # ——— Helper Functions ———
-def butter_filter(lowcut, highcut, fs, order=6, btype='band'):
+def butter_filter(lowcut, highcut, fs, order=6, btype="band"):
     nyq = 0.5 * fs
-    if btype == 'band':
+    if btype == "band":
         low = lowcut / nyq
         high = highcut / nyq
-        b, a = butter(order, [low, high], btype='band')
+        b, a = butter(order, [low, high], btype="band")
     else:
         cutoff = (lowcut or highcut) / nyq
         normal_cutoff = cutoff / nyq
         b, a = butter(order, normal_cutoff, btype=btype)
     return b, a
+
 
 def apply_filter(audio, fs):
     """
@@ -51,7 +53,7 @@ def apply_filter(audio, fs):
     If you really want band-pass, uncomment the bandpass block.
     """
     # 1) High-pass at 20 Hz
-    sos_hp = butter(6, 20, btype='highpass', fs=fs, output='sos')
+    sos_hp = butter(6, 20, btype="highpass", fs=fs, output="sos")
     filtered = sosfiltfilt(sos_hp, audio)
 
     # 2) (Optional) band-pass 20 Hz–7.5 kHz — stays below Nyquist
@@ -60,17 +62,20 @@ def apply_filter(audio, fs):
 
     return filtered
 
+
 def trim_silence(audio):
     # trimmed, _ = librosa.effects.trim(audio, top_db=60)
     return audio
 
+
 def normalize(audio):
     return audio / (np.max(np.abs(audio)) + 1e-9)
+
 
 def pad_or_trim(audio, target_len):
     if len(audio) < target_len:
         pad_width = target_len - len(audio)
-        audio = np.pad(audio, (0, pad_width), mode='constant')
+        audio = np.pad(audio, (0, pad_width), mode="constant")
     else:
         audio = audio[:target_len]
     return audio
@@ -78,7 +83,9 @@ def pad_or_trim(audio, target_len):
 
 def process_file(path):
     audio, sr = librosa.load(path, sr=None, mono=True)
-    print(f"\n[{path.name}] raw load → {len(audio)} samples @ {sr} Hz; max amp = {np.max(np.abs(audio)):.6f}")
+    print(
+        f"\n[{path.name}] raw load → {len(audio)} samples @ {sr} Hz; max amp = {np.max(np.abs(audio)):.6f}"
+    )
     if sr != SAMPLE_RATE:
         audio = librosa.resample(audio, orig_sr=sr, target_sr=SAMPLE_RATE)
 
@@ -107,6 +114,7 @@ def process_file(path):
 
     return audio
 
+
 def augment(audio, sr):
     # Make sure buffer is clean
     audio = np.nan_to_num(audio, posinf=0.0, neginf=0.0)
@@ -130,6 +138,7 @@ def augment(audio, sr):
 
     return variants
 
+
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -148,6 +157,7 @@ def main():
             sf.write(aug_out, aug_audio, SAMPLE_RATE)
 
         print(f"Processed {wav_path.name}: cleaned + {N_AUG} augmentations saved.")
+
 
 if __name__ == "__main__":
     main()
