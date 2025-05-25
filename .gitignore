@@ -27,7 +27,6 @@ node_modules
 /app/components/ui/icons
 .react-router/
 
-/model/training-samples/split/*
+/model/data/*
 /model/generated/*
 /model/checkpoints/*
-/model/*
