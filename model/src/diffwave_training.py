@@ -15,6 +15,10 @@ from config import (
 from dataset import AudioDataset
 from diffwave_model import DiffWave
 from tqdm import tqdm
+from torch.amp import autocast, GradScaler
+from torch.utils.tensorboard import SummaryWriter
+
+writer = SummaryWriter(log_dir="logs/diffwave")
 
 
 def train_diffwave():
@@ -22,7 +26,7 @@ def train_diffwave():
     os.makedirs(GENERATED_DIR, exist_ok=True)
 
     model_config = {
-        "timesteps": 1000,
+        "timesteps": 200,
         "beta_start": 1e-4,
         "beta_end": 0.02,
         "time_emb_dim": 128,
@@ -31,6 +35,7 @@ def train_diffwave():
     }
     model = DiffWave(model_config).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)
+    scaler = GradScaler()
 
     for stage_name, duration_s, epochs in CURRICULUM:
         seq_len = int(duration_s * SAMPLE_RATE)
@@ -41,18 +46,32 @@ def train_diffwave():
                 clean = clean.to(DEVICE)
                 loss = model.compute_loss(clean)
                 optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                with autocast(device_type=DEVICE.type, dtype=torch.float16):
+                    # Forward pass
+                    loss = model.compute_loss(clean)
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
             # Save checkpoint and generate sample
             ckpt = os.path.join(CHECKPOINT_DIR, f"DW_{stage_name}_e{epoch}.pt")
             torch.save(model.state_dict(), ckpt)
-            sample = model.inference(seq_len)
-            torchaudio.save(
-                os.path.join(GENERATED_DIR, f"dw_{stage_name}_e{epoch}.wav"),
-                sample.cpu(),
-                SAMPLE_RATE,
-            )
+            if epoch % 5 == 0 or epoch == epochs - 1:
+                print(f"Saving checkpoint to {ckpt}")
+                with torch.no_grad():
+                    sample = model.inference(seq_len)
+                torchaudio.save(
+                    os.path.join(GENERATED_DIR, f"dw_{stage_name}_e{epoch}.wav"),
+                    sample.cpu(),
+                    SAMPLE_RATE,
+                )
+                writer.add_audio(
+                    f"sample/{stage_name}_epoch_{epoch}",
+                    sample.cpu(),
+                    global_step=epoch,
+                    sample_rate=SAMPLE_RATE,
+                )
             print(f"Stage {stage_name} Epoch {epoch}: loss={loss.item():.4f}")
+            writer.add_scalar(f"loss/{stage_name}", loss.item(), epoch)
 
 
 if __name__ == "__main__":
