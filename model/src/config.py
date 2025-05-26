@@ -10,6 +10,7 @@ LATENT_DIM = 100
 BATCH_SIZE = 16
 N_CRITIC = 5
 LR = 5e-5
+DR_LR = 1e-4  # Discriminator learning rate
 LAMBDA_GP = 10
 
 # Progressive curriculum: (stage_name, duration_s, epochs)
