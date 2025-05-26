@@ -26,3 +26,7 @@ node_modules
 # generated files
 /app/components/ui/icons
 .react-router/
+
+/model/data/*
+/model/generated/*
+/model/checkpoints/*
