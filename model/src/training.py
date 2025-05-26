@@ -42,7 +42,7 @@ def train_stage(stage_name, seq_len, epochs, resume_ckpt=None, is_latest=False):
         latest_stage = stage_name
     else:
         latest_stage = None
-    g_ckpt, d_ckpt, start_epoch = find_latest_checkpoint(CHECKPOINT_DIR, latest_stage)
+    g_ckpt, d_ckpt, start_epoch = find_latest_checkpoint(CHECKPOINT_DIR)
     if g_ckpt:
         print(f"Resuming from epoch {start_epoch}")
         generator.load_state_dict(torch.load(g_ckpt))
@@ -59,8 +59,10 @@ def train_stage(stage_name, seq_len, epochs, resume_ckpt=None, is_latest=False):
         start_epoch = ckpt["epoch"] + 1
         print(f"Resuming from epoch {start_epoch}")
 
-    for epoch in range(start_epoch, epochs):
-        print(f"Epoch {epoch}/{epochs} - Stage: {stage_name}, Seq Len: {seq_len}s")
+    for epoch in range(start_epoch, epochs + start_epoch):
+        print(
+            f"Epoch {epoch}/{epochs + start_epoch} - Stage: {stage_name}, Seq Len: {seq_len}s"
+        )
         for i, real_audio in enumerate(tqdm(loader)):
             real_audio = real_audio.to(DEVICE)
 

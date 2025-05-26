@@ -4,20 +4,30 @@ import torch
 import torchaudio
 from model import build_generator_for
 from utils import find_latest_checkpoint
-from config import SAMPLE_RATE, LATENT_DIM, CHECKPOINT_DIR, DEVICE, GENERATED_DIR
+from config import (
+    SAMPLE_RATE,
+    LATENT_DIM,
+    CHECKPOINT_DIR,
+    DEVICE,
+    GENERATED_DIR,
+    SEQ_LEN,
+)
 
 
-def main(duration_s=4):
+def main(duration_s=1):
     generator = build_generator_for(duration_s).to(DEVICE)
-    ckpt, _ = find_latest_checkpoint()
-    generator.load_state_dict(torch.load(ckpt, map_location=DEVICE))
+    g_ckpt, d_ckpt, _ = find_latest_checkpoint(CHECKPOINT_DIR)
+    generator.load_state_dict(torch.load(g_ckpt, map_location=DEVICE))
     generator.eval()
-    z = torch.randn(1, LATENT_DIM, 1)
-    audio = generator(z)[:, :, : int(duration_s * SAMPLE_RATE)].squeeze(0)
-    os.makedirs(GENERATED_DIR, exist_ok=True)
-    torchaudio.save(
-        f"{GENERATED_DIR}/sample_{duration_s}s.wav", audio.unsqueeze(0), SAMPLE_RATE
-    )
+    with torch.no_grad():
+        z = torch.randn(1, LATENT_DIM, 1)
+        sample = generator(z)[:, :, :SEQ_LEN].squeeze().cpu()
+        os.makedirs(GENERATED_DIR, exist_ok=True)
+        torchaudio.save(
+            f"{GENERATED_DIR}/sample_{duration_s}s.wav",
+            sample.unsqueeze(0),
+            SAMPLE_RATE,
+        )
 
 
 if __name__ == "__main__":
