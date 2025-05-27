@@ -30,13 +30,19 @@ class ResidualBlock(nn.Module):
         self.norm2 = nn.GroupNorm(8, channels)
         self.conv2 = nn.Conv1d(channels, channels, kernel_size=3, padding=1)
         self.act = nn.SiLU()
+        self.cond_proj = nn.Conv1d(time_emb_dim, channels, 1)
 
-    def forward(self, x, t_emb):
+    def forward(self, x, t_emb, cond=None):
         h = self.norm1(x)
         h = self.act(h)
         h = self.conv1(h)
         # add time embedding
         time_proj = self.time_mlp(t_emb)[:, :, None]
+        # cond‐add if provided
+        if cond is not None:
+            # cond: [B, time_emb_dim, L] → project to [B, channels, L]
+            h = h + self.cond_proj(cond)
+
         h = h + time_proj
         h = self.norm2(h)
         h = self.act(h)
@@ -44,9 +50,29 @@ class ResidualBlock(nn.Module):
         return x + h
 
 
+class Transpose(nn.Module):
+    def __init__(self, dim0, dim1):
+        super().__init__()
+        self.dim0 = dim0
+        self.dim1 = dim1
+
+    def forward(self, x):
+        return x.transpose(self.dim0, self.dim1)
+
+
 class DiffWave(nn.Module):
     def __init__(self, model_config):
         super().__init__()
+        self.mel_channels = model_config.get("n_mels", 80)
+        time_emb_dim = model_config.get("time_emb_dim", 128)
+        # project mel to time-embedding dim
+        self.mel_proj = nn.Sequential(
+            nn.Conv1d(self.mel_channels, time_emb_dim, 1),
+            nn.SiLU(),
+            Transpose(1, 2),  # [B, T, time_emb_dim]
+            nn.Linear(time_emb_dim, time_emb_dim),
+            Transpose(1, 2),  # [B, time_emb_dim, T]
+        )
         self.device = DEVICE
         # diffusion hyperparameters
         self.timesteps = model_config.get("timesteps", 1000)
@@ -78,21 +104,28 @@ class DiffWave(nn.Module):
         self.final_act = nn.SiLU()
         self.final_conv = nn.Conv1d(channels, 1, kernel_size=3, padding=1)
 
-    def forward(self, x, t):
+    def forward(self, x, t, mel):
         """
         x: [B, 1, L], t: [B] timestep indices
         returns predicted noise epsilon
         """
         t_emb = self.time_emb(t)
         t_emb = self.mlp_time(t_emb)
+        # 2) process and upsample mel:
+        mel_emb = self.mel_proj(mel)  # [B, time_emb_dim, T_mel]
+        # upsample in time to L
+        mel_emb = torch.nn.functional.interpolate(
+            mel_emb, size=x.shape[-1], mode="linear", align_corners=False
+        )  # [B, time_emb_dim, L]
+        # now mel_emb[:, :, i] is the conditional bias for each time step
         h = self.initial_conv(x)
         for block in self.res_blocks:
-            h = block(h, t_emb)
+            h = block(h, t_emb, cond=mel_emb)
         h = self.final_norm(h)
         h = self.final_act(h)
         return self.final_conv(h)
 
-    def compute_loss(self, clean):
+    def compute_loss(self, clean, mel):
         """
         clean: [B, 1, L]
         returns MSE loss between predicted and true noise
@@ -105,11 +138,11 @@ class DiffWave(nn.Module):
         a_hat = self.alpha_hat[t][:, None, None]
         noise = torch.randn_like(clean)
         x_t = torch.sqrt(a_hat) * clean + torch.sqrt(1 - a_hat) * noise
-        pred_noise = self.forward(x_t, t)
+        pred_noise = self.forward(x_t, t, mel)
         return nn.functional.mse_loss(pred_noise, noise)
 
     @torch.no_grad()
-    def inference(self, seq_len):
+    def inference(self, seq_len, mel):
         """
         returns: [1, 1, seq_len]
         """
@@ -120,7 +153,7 @@ class DiffWave(nn.Module):
             a_hat = self.alpha_hat[i]
             beta = self.betas[i]
             # predict noise
-            eps = self.forward(x, t)
+            eps = self.forward(x, t, mel=mel)
             # compute posterior mean
             coef1 = 1 / torch.sqrt(self.alphas[i])
             coef2 = beta / torch.sqrt(1 - self.alpha_hat[i])
