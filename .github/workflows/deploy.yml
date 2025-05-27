@@ -78,11 +78,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: 🧹 Clean up node_modules and lock file
-        run: |
-          rm -rf node_modules
-          rm -f package-lock.json
-
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
 
