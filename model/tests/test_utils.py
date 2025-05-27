@@ -1,18 +1,19 @@
 import torch
 from utils import compute_gradient_penalty, find_latest_checkpoint
+from config import DEVICE
 
 
 def test_gradient_penalty():
     B, C, L = 2, 1, 16
-    real = torch.randn(B, C, L)
-    fake = torch.randn(B, C, L)
+    real = torch.randn(B, C, L).to(DEVICE)
+    fake = torch.randn(B, C, L).to(DEVICE)
     gp = compute_gradient_penalty(lambda x: torch.sum(x), real, fake)
     assert gp >= 0
 
 
 def test_gradient_penalty_zero_when_real_equals_fake():
     B, C, L = 2, 1, 16
-    real = torch.randn(B, C, L, requires_grad=True)
+    real = torch.randn(B, C, L, requires_grad=True).to(DEVICE)
     gp = compute_gradient_penalty(lambda x: x.sum(), real, real)
     assert gp >= 0
     assert torch.isfinite(gp), "Gradient penalty should be finite"
@@ -20,8 +21,8 @@ def test_gradient_penalty_zero_when_real_equals_fake():
 
 def test_gradient_penalty_requires_grad():
     B, C, L = 2, 1, 16
-    real = torch.randn(B, C, L, requires_grad=True)
-    fake = torch.randn(B, C, L, requires_grad=True)
+    real = torch.randn(B, C, L, requires_grad=True).to(DEVICE)
+    fake = torch.randn(B, C, L, requires_grad=True).to(DEVICE)
     gp = compute_gradient_penalty(lambda x: x.sum(), real, fake)
     assert isinstance(gp, torch.Tensor)
     assert gp.requires_grad is False  # Should be a scalar, not requiring grad
