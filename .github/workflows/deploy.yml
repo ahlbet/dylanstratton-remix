@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - dev
+      - develop
   pull_request: {}
 
 concurrency:
@@ -165,7 +165,7 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@1.5
 
       - name: 📦 Build Staging Container
-        if: ${{ github.ref == 'refs/heads/dev' }}
+        if: ${{ github.ref == 'refs/heads/develop' }}
         run: |
           flyctl deploy \
             --build-only \
@@ -211,7 +211,7 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@1.5
 
       - name: 🚀 Deploy Staging
-        if: ${{ github.ref == 'refs/heads/dev' }}
+        if: ${{ github.ref == 'refs/heads/develop' }}
         run: |
           IMAGE="registry.fly.io/${{ steps.app_name.outputs.value }}-staging:${{ github.sha }}"
           flyctl deploy --image $IMAGE --app ${{ steps.app_name.outputs.value }}-staging
