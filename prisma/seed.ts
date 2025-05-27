@@ -107,27 +107,52 @@ async function seed() {
 	}
 
 	const githubUser = await insertGitHubUser(MOCK_CODE_GITHUB)
+	const dylanGithubUser = await insertGitHubUser(MOCK_CODE_GITHUB)
 
-	const kody = await prisma.user.create({
+	const dylan = await prisma.user.create({
 		select: { id: true },
 		data: {
-			email: 'kody@kcd.dev',
-			username: 'kody',
-			name: 'Kody',
-			password: { create: createPassword('kodylovesyou') },
+			email: 'dm.stratton94@gmail.com',
+			username: 'dylanstratton',
+			name: 'Dylan',
+			password: { create: createPassword('dylanlovesyou') },
 			connections: {
 				create: {
 					providerName: 'github',
-					providerId: String(githubUser.profile.id),
+					providerId: String(dylanGithubUser.profile.id),
 				},
 			},
 			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
 		},
 	})
 
+	// const kody = await prisma.user.create({
+	// 	select: { id: true },
+	// 	data: {
+	// 		email: 'kody@kcd.dev',
+	// 		username: 'kody',
+	// 		name: 'Kody',
+	// 		password: { create: createPassword('kodylovesyou') },
+	// 		connections: {
+	// 			create: {
+	// 				providerName: 'github',
+	// 				providerId: String(githubUser.profile.id),
+	// 			},
+	// 		},
+	// 		roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
+	// 	},
+	// })
+
+	// await prisma.userImage.create({
+	// 	data: {
+	// 		userId: kody.id,
+	// 		objectKey: kodyImages.kodyUser.objectKey,
+	// 	},
+	// })
+
 	await prisma.userImage.create({
 		data: {
-			userId: kody.id,
+			userId: dylan.id,
 			objectKey: kodyImages.kodyUser.objectKey,
 		},
 	})
@@ -220,6 +245,28 @@ async function seed() {
 		},
 	]
 
+	// for (const noteData of kodyNotes) {
+	// 	const note = await prisma.note.create({
+	// 		select: { id: true },
+	// 		data: {
+	// 			id: noteData.id,
+	// 			title: noteData.title,
+	// 			content: noteData.content,
+	// 			ownerId: kody.id,
+	// 		},
+	// 	})
+
+	// 	for (const image of noteData.images) {
+	// 		await prisma.noteImage.create({
+	// 			data: {
+	// 				noteId: note.id,
+	// 				altText: image.altText,
+	// 				objectKey: image.objectKey,
+	// 			},
+	// 		})
+	// 	}
+	// }
+
 	for (const noteData of kodyNotes) {
 		const note = await prisma.note.create({
 			select: { id: true },
@@ -227,7 +274,7 @@ async function seed() {
 				id: noteData.id,
 				title: noteData.title,
 				content: noteData.content,
-				ownerId: kody.id,
+				ownerId: dylan.id,
 			},
 		})
 
@@ -243,6 +290,7 @@ async function seed() {
 	}
 
 	console.timeEnd(`🐨 Created admin user "kody"`)
+	console.timeEnd(`🐨 Created admin user "dylan"`)
 
 	console.timeEnd(`🌱 Database has been seeded`)
 }
