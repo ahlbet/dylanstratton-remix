@@ -61,7 +61,7 @@ def train_diffwave():
             done = 0
         dataset = AudioDataset(PROCESSED_DATA_DIR, seq_len)
         loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
-        for epoch in tqdm(range(done, epochs), desc=f"Stage {stage_name}"):
+        for epoch in tqdm(range(done, epochs + done), desc=f"Stage {stage_name}"):
             for clean in tqdm(loader, desc=f"{stage_name} Epoch {epoch}"):
                 clean = clean.to(DEVICE)
                 loss = model.compute_loss(clean)
@@ -92,7 +92,10 @@ def train_diffwave():
                 )
             print(f"Stage {stage_name} Epoch {epoch}: loss={loss.item():.4f}")
             writer.add_scalar(f"loss/{stage_name}", loss.item(), epoch)
+            writer.flush()
 
 
 if __name__ == "__main__":
     train_diffwave()
+    writer.close()
+    print("Training complete. Checkpoints and samples saved.")

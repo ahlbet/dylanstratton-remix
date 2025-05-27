@@ -45,13 +45,13 @@ def train_stage(stage_name, seq_len, epochs, resume_ckpt=None, is_latest=False):
     g_ckpt, d_ckpt, start_epoch = find_latest_checkpoint(CHECKPOINT_DIR)
     if g_ckpt:
         print(f"Resuming from epoch {start_epoch}")
-        generator.load_state_dict(torch.load(g_ckpt))
-        discriminator.load_state_dict(torch.load(d_ckpt))
+        generator.load_state_dict(torch.load(g_ckpt, map_location=DEVICE))
+        discriminator.load_state_dict(torch.load(d_ckpt, map_location=DEVICE))
     else:
         start_epoch = 0
         print("No checkpoint found — starting from scratch")
     if resume_ckpt:
-        ckpt = torch.load(resume_ckpt)
+        ckpt = torch.load(resume_ckpt, map_location=DEVICE)
         generator.load_state_dict(ckpt["generator"])
         discriminator.load_state_dict(ckpt["discriminator"])
         optim_G.load_state_dict(ckpt["optim_G"])
