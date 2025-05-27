@@ -5,7 +5,9 @@ src/model.egg-info/dependency_links.txt
 src/model.egg-info/entry_points.txt
 src/model.egg-info/top_level.txt
 src/scripts/__init__.py
+src/scripts/diffwave_train.py
 src/scripts/generate_audio.py
+src/scripts/generate_diffwave.py
 src/scripts/preprocess_audio.py
 src/scripts/split_audio.py
 src/scripts/train.py

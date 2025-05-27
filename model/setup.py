@@ -11,7 +11,9 @@ setup(
     entry_points={
         "console_scripts": [
             "train=scripts.train:main",
+            "train_diffwave=scripts.diffwave_train:main",
             "generate=scripts.generate_audio:main",
+            "generate_diffwave=scripts.generate_diffwave:main",
             "preprocess=scripts.preprocess_audio:main",
         ],
     },
