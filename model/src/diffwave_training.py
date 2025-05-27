@@ -28,7 +28,7 @@ def train_diffwave():
     os.makedirs(GENERATED_DIR, exist_ok=True)
 
     model_config = {
-        "timesteps": 200,
+        "timesteps": 1000,
         "beta_start": 1e-4,
         "beta_end": 0.02,
         "time_emb_dim": 128,
