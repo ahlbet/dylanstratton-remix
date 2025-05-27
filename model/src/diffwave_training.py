@@ -17,6 +17,8 @@ from diffwave_model import DiffWave
 from tqdm import tqdm
 from torch.amp import autocast, GradScaler
 from torch.utils.tensorboard import SummaryWriter
+from glob import glob
+import re
 
 writer = SummaryWriter(log_dir="logs/diffwave")
 
@@ -39,9 +41,27 @@ def train_diffwave():
 
     for stage_name, duration_s, epochs in CURRICULUM:
         seq_len = int(duration_s * SAMPLE_RATE)
+        # Determine start epoch for this stage by scanning existing checkpoints
+        pattern = os.path.join(CHECKPOINT_DIR, f"DW_{stage_name}_e*.pt")
+        ckpts = glob(pattern)
+        if ckpts:
+            done = (
+                max(
+                    int(
+                        re.search(
+                            rf"DW_{stage_name}_e(\d+).pt", os.path.basename(p)
+                        ).group(1)
+                    )
+                    for p in ckpts
+                )
+                + 1
+            )
+            print(f"Resuming DiffWave {stage_name} from epoch {done}")
+        else:
+            done = 0
         dataset = AudioDataset(PROCESSED_DATA_DIR, seq_len)
         loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
-        for epoch in tqdm(range(epochs), desc=f"Stage {stage_name}"):
+        for epoch in tqdm(range(done, epochs), desc=f"Stage {stage_name}"):
             for clean in tqdm(loader, desc=f"{stage_name} Epoch {epoch}"):
                 clean = clean.to(DEVICE)
                 loss = model.compute_loss(clean)
@@ -61,12 +81,12 @@ def train_diffwave():
                     sample = model.inference(seq_len)
                 torchaudio.save(
                     os.path.join(GENERATED_DIR, f"dw_{stage_name}_e{epoch}.wav"),
-                    sample.cpu(),
+                    sample.cpu().squeeze(0),
                     SAMPLE_RATE,
                 )
                 writer.add_audio(
                     f"sample/{stage_name}_epoch_{epoch}",
-                    sample.cpu(),
+                    sample.cpu().squeeze(0),
                     global_step=epoch,
                     sample_rate=SAMPLE_RATE,
                 )
