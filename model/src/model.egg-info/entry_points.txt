@@ -1,0 +1,6 @@
+[console_scripts]
+generate = scripts.generate_audio:main
+generate_diffwave = scripts.generate_diffwave:main
+preprocess = scripts.preprocess_audio:main
+train = scripts.train:main
+train_diffwave = scripts.diffwave_train:main
