@@ -27,4 +27,10 @@ CHECKPOINT_DIR = "checkpoints"
 GENERATED_DIR = "generated"
 
 # Device
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device(
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
