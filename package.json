@@ -27,6 +27,7 @@
     "test:e2e:install": "npx playwright install --with-deps chromium",
     "typecheck": "react-router typegen && tsc",
     "validate": "run-p \"test -- --run\" lint typecheck test:e2e:run",
+    "pytest": "cd model && pytest",
     "tensorboard": "tensorboard --logdir=./model/logs/diffwave"
   },
   "prettier": "@epic-web/config/prettier",
