@@ -11,7 +11,7 @@ export async function loader({ request }: { request: Request }) {
 	return { user }
 }
 
-export default function TrainingLayout() {
+export default function TrainingRoute() {
 	return (
 		<div className="m-auto mt-8 mb-24 max-w-3xl">
 			<div className="container">

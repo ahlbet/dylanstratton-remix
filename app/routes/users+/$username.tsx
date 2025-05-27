@@ -40,6 +40,7 @@ export default function ProfileRoute() {
 	const userDisplayName = user.name ?? user.username
 	const loggedInUser = useOptionalUser()
 	const isLoggedInUser = user.id === loggedInUser?.id
+	const isAdmin = loggedInUser?.roles.some((role) => role.name === 'admin')
 
 	return (
 		<div className="container mt-36 mb-48 flex flex-col items-center justify-center">
@@ -91,6 +92,13 @@ export default function ProfileRoute() {
 										Edit profile
 									</Link>
 								</Button>
+								{isAdmin && (
+									<Button asChild>
+										<Link to="/training" prefetch="intent">
+											Training
+										</Link>
+									</Button>
+								)}
 							</>
 						) : (
 							<Button asChild>
