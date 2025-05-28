@@ -272,6 +272,15 @@ export function useDebounce<
 	)
 }
 
+/**
+ * Returns true if the component is hydrated on the client
+ */
+export function useHydrated() {
+	const [hydrated, setHydrated] = useState(false)
+	useEffect(() => setHydrated(true), [])
+	return hydrated
+}
+
 export async function downloadFile(url: string, retries: number = 0) {
 	const MAX_RETRIES = 3
 	try {
