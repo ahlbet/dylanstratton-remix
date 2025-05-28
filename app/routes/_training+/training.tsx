@@ -1,14 +1,30 @@
 import * as React from 'react'
-import { Outlet } from 'react-router'
-import { requireUserId } from '#app/utils/auth.server.ts'
+import { Outlet, useRouteError } from 'react-router'
+import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { invariantResponse } from '@epic-web/invariant'
+import { GeneralErrorBoundary } from '../../components/error-boundary.tsx'
 
 export async function loader({ request }: { request: Request }) {
-	const userId = await requireUserId(request)
+	const userId = await requireUserWithRole(request, 'admin')
 	const user = await prisma.user.findUnique({ where: { id: userId } })
 	invariantResponse(user, 'User not found', { status: 404 })
 	return { user }
+}
+
+function ErrorBoundary() {
+	const error = useRouteError() as any
+
+	if (error?.status === 403) {
+		return (
+			<div className="container mx-auto flex h-full w-full flex-col justify-center pt-20 pb-32 text-center">
+				<h3 className="text-h3">Unauthorized</h3>
+				<p className="mt-2">You do not have access to this page.</p>
+			</div>
+		)
+	}
+
+	return <GeneralErrorBoundary />
 }
 
 export default function TrainingRoute() {
@@ -26,3 +42,5 @@ export default function TrainingRoute() {
 		</div>
 	)
 }
+
+export { ErrorBoundary }
