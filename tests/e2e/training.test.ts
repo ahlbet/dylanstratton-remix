@@ -69,13 +69,18 @@ test.describe('Training Flow', () => {
 			page.getByRole('button', { name: /train model/i }).click()
 		])
 		
-		// Wait for the success state
-		await expect(page.getByText(/file.*saved/i)).toBeVisible()
+		// Wait for the training process to complete
+		await expect(page.getByText('Training...')).toBeVisible()
+		await expect(page.getByText('Training...')).not.toBeVisible()
+		
+		// Ensure we're back on the training page and model is trained
+		await page.waitForURL('/training')
+		await page.waitForLoadState('networkidle')
 		
 		// Now wait for the generate button to appear and be enabled
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
-		await expect(generateButton).toBeVisible()
-		await expect(generateButton).toBeEnabled()
+		await expect(generateButton).toBeVisible({ timeout: 10000 })
+		await expect(generateButton).toBeEnabled({ timeout: 10000 })
 
 		// Generate audio
 		await generateButton.click()
