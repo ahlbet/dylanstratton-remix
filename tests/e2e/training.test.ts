@@ -65,30 +65,19 @@ test.describe('Training Flow', () => {
 		
 		// Start training and wait for it to complete
 		const trainButton = page.getByRole('button', { name: /train model/i })
-		
-		// Click the train button and wait for navigation to complete
 		await trainButton.click()
 		
 		// Wait for the form submission to complete
 		await page.waitForLoadState('networkidle')
 		
-		// Click the train button again to ensure the model is trained
-		await trainButton.click()
-		await page.waitForLoadState('networkidle')
-		
-		// Wait for the success state to be reflected in the UI
-		await page.waitForSelector('button[name="intent"][value="generate"]', { 
-			state: 'visible',
-			timeout: 10000 
-		})
-		
-		// Now wait for the generate button to appear and be enabled
+		// Wait for the success state to be reflected in the UI by checking for the generate button
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
 		await expect(generateButton).toBeVisible({ timeout: 10000 })
 		await expect(generateButton).toBeEnabled({ timeout: 10000 })
 
 		// Generate audio
 		await generateButton.click()
+		await page.waitForLoadState('networkidle')
 		
 		// Wait for the Generated Audio section to appear and be ready
 		const generatedSection = page.locator('div.rounded-lg.border', { hasText: 'Generated Audio' }).first()
