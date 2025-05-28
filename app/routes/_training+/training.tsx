@@ -183,7 +183,6 @@ export default function TrainingRoute() {
 	const [selectedFiles, setSelectedFiles] = React.useState<FileList | null>(
 		null,
 	)
-	const [isModelTrained, setIsModelTrained] = React.useState(false)
 	const [generatedAudio, setGeneratedAudio] = React.useState<{
 		url: string
 		timestamp: string
@@ -208,26 +207,26 @@ export default function TrainingRoute() {
 		}
 	}
 
-	const handleTrainSuccess = () => {
-		setIsModelTrained(true)
-	}
+	// Determine if the model is trained based on action data
+	const isModelTrained = Boolean(
+		navigation.state === 'idle' && actionData?.success && actionData.savedFiles,
+	)
 
-	// Handle form submission response
-	React.useEffect(() => {
-		if (
-			navigation.state === 'idle' &&
-			actionData?.success &&
-			'audioUrl' in actionData &&
-			'timestamp' in actionData &&
-			typeof actionData.audioUrl === 'string' &&
-			typeof actionData.timestamp === 'string'
-		) {
-			setGeneratedAudio({
-				url: actionData.audioUrl,
-				timestamp: actionData.timestamp,
-			})
-		}
-	}, [navigation.state, actionData])
+	// Handle generate success
+	if (
+		navigation.state === 'idle' &&
+		actionData?.success &&
+		'audioUrl' in actionData &&
+		'timestamp' in actionData &&
+		typeof actionData.audioUrl === 'string' &&
+		typeof actionData.timestamp === 'string' &&
+		!generatedAudio
+	) {
+		setGeneratedAudio({
+			url: actionData.audioUrl,
+			timestamp: actionData.timestamp,
+		})
+	}
 
 	const formatDuration = (seconds: number) => {
 		const minutes = Math.floor(seconds / 60)
@@ -284,7 +283,6 @@ export default function TrainingRoute() {
 										status={pendingIntent === 'train' ? 'pending' : 'idle'}
 										className="w-full"
 										disabled={!selectedFiles || isPending}
-										onClick={handleTrainSuccess}
 									>
 										<div className="flex items-center gap-2">
 											<Icon name="moon" className="size-4 text-gray-700" />
