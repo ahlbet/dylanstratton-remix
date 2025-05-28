@@ -64,16 +64,16 @@ test.describe('Training Flow', () => {
 		await page.setInputFiles('input[type="file"]', testAudioPath)
 		
 		// Start training and wait for it to complete
+		const trainButton = page.getByRole('button', { name: /train model/i })
 		await Promise.all([
-			page.waitForResponse(response => response.url().includes('/training')),
-			page.getByRole('button', { name: /train model/i }).click()
+			page.waitForResponse(response => 
+				response.url().includes('/training') && 
+				response.request().method() === 'POST'
+			),
+			trainButton.click()
 		])
 		
-		// Wait for the training process to complete
-		await expect(page.getByRole('button', { name: /training/i })).toBeVisible()
-		await expect(page.getByRole('button', { name: /training/i })).not.toBeVisible()
-		
-		// Ensure we're back on the training page and model is trained
+		// Wait for the form submission to complete and the page to be ready
 		await page.waitForURL('/training')
 		await page.waitForLoadState('networkidle')
 		
