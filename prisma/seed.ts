@@ -108,10 +108,12 @@ async function seed() {
 
 	const githubUser = await insertGitHubUser(MOCK_CODE_GITHUB)
 	const dylanGithubUser = await insertGitHubUser(MOCK_CODE_GITHUB)
+	const nonAdminGithubUser = await insertGitHubUser(MOCK_CODE_GITHUB)
 
-	const dylan = await prisma.user.create({
+	const dylan = await prisma.user.upsert({
 		select: { id: true },
-		data: {
+		where: { username: 'dylanstratton' },
+		create: {
 			email: 'dm.stratton94@gmail.com',
 			username: 'dylanstratton',
 			name: 'Dylan',
@@ -123,6 +125,32 @@ async function seed() {
 				},
 			},
 			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
+		},
+		update: {
+			email: 'dm.stratton94@gmail.com',
+			name: 'Dylan',
+		},
+	})
+
+	const nonAdmin = await prisma.user.upsert({
+		select: { id: true },
+		where: { username: 'nonadmin' },
+		create: {
+			email: 'nonadmin@example.com',
+			username: 'nonadmin',
+			name: 'NonAdmin',
+			password: { create: createPassword('nonadmin') },
+			connections: {
+				create: {
+					providerName: 'github',
+					providerId: String(nonAdminGithubUser.profile.id),
+				},
+			},
+			roles: { connect: [{ name: 'user' }] },
+		},
+		update: {
+			email: 'nonadmin@example.com',
+			name: 'NonAdmin',
 		},
 	})
 
@@ -150,12 +178,12 @@ async function seed() {
 	// 	},
 	// })
 
-	await prisma.userImage.create({
-		data: {
-			userId: dylan.id,
-			objectKey: kodyImages.kodyUser.objectKey,
-		},
-	})
+	// await prisma.userImage.create({
+	// 	data: {
+	// 		userId: dylan.id,
+	// 		objectKey: kodyImages.kodyUser.objectKey,
+	// 	},
+	// })
 
 	// Create Kody's notes
 	const kodyNotes = [
@@ -267,27 +295,27 @@ async function seed() {
 	// 	}
 	// }
 
-	for (const noteData of kodyNotes) {
-		const note = await prisma.note.create({
-			select: { id: true },
-			data: {
-				id: noteData.id,
-				title: noteData.title,
-				content: noteData.content,
-				ownerId: dylan.id,
-			},
-		})
+	// for (const noteData of kodyNotes) {
+	// 	const note = await prisma.note.create({
+	// 		select: { id: true },
+	// 		data: {
+	// 			id: noteData.id,
+	// 			title: noteData.title,
+	// 			content: noteData.content,
+	// 			ownerId: dylan.id,
+	// 		},
+	// 	})
 
-		for (const image of noteData.images) {
-			await prisma.noteImage.create({
-				data: {
-					noteId: note.id,
-					altText: image.altText,
-					objectKey: image.objectKey,
-				},
-			})
-		}
-	}
+	// 	for (const image of noteData.images) {
+	// 		await prisma.noteImage.create({
+	// 			data: {
+	// 				noteId: note.id,
+	// 				altText: image.altText,
+	// 				objectKey: image.objectKey,
+	// 			},
+	// 		})
+	// 	}
+	// }
 
 	console.timeEnd(`🐨 Created admin user "kody"`)
 	console.timeEnd(`🐨 Created admin user "dylan"`)
