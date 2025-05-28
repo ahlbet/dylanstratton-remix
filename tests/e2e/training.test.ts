@@ -64,14 +64,13 @@ test.describe('Training Flow', () => {
 		await page.setInputFiles('input[type="file"]', testAudioPath)
 		
 		// Start training and wait for it to complete
-		const trainButton = page.getByRole('button', { name: /train model/i })
-		await trainButton.click()
+		await Promise.all([
+			page.waitForResponse(response => response.url().includes('/training')),
+			page.getByRole('button', { name: /train model/i }).click()
+		])
 		
-		// Wait for the training state
-		await expect(page.getByText('Training...')).toBeVisible()
-		
-		// Wait for navigation state to be idle (action completed)
-		await page.waitForURL('/training')
+		// Wait for the success state
+		await expect(page.getByText(/file.*saved/i)).toBeVisible()
 		
 		// Now wait for the generate button to appear and be enabled
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
