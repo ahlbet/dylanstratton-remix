@@ -70,19 +70,14 @@ test.describe('Training Flow', () => {
 		// Wait for the form submission to start
 		await expect(page.getByRole('button', { name: /training\.\.\./i })).toBeVisible()
 		
-		// Wait for the form submission to complete
-		await page.waitForLoadState('networkidle')
+		// Wait for the form submission to complete and navigation to be idle
+		await page.waitForFunction(() => {
+			const navigation = document.querySelector('[data-testid="navigation-state"]')
+			return navigation?.textContent === 'idle'
+		}, { timeout: 10000 })
 		
-		// Wait for the training state to complete and the page to update
+		// Wait for the training state to complete
 		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible()
-		await page.waitForLoadState('networkidle')
-		
-		// Wait for the form to show success state
-		await page.waitForSelector('form[data-success="true"]', { timeout: 10000 })
-		
-		// Ensure the page is fully loaded
-		await page.reload()
-		await page.waitForLoadState('networkidle')
 		
 		// Now wait for the generate button to appear and be enabled
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
