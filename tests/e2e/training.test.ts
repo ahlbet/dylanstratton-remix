@@ -63,10 +63,14 @@ test.describe('Training Flow', () => {
 		const testAudioPath = 'tests/fixtures/test-audio.wav'
 		await page.setInputFiles('input[type="file"]', testAudioPath)
 		await page.getByRole('button', { name: /train model/i }).click()
-		await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible()
+		
+		// Wait for training to complete and generate button to be enabled
+		const generateButton = page.getByRole('button', { name: /generate audio/i })
+		await expect(generateButton).toBeVisible()
+		await expect(generateButton).toBeEnabled()
 
 		// Generate audio
-		await page.getByRole('button', { name: /generate audio/i }).click()
+		await generateButton.click()
 		
 		// Wait for the Generated Audio section to appear and be ready
 		const generatedSection = page.locator('div.rounded-lg.border', { hasText: 'Generated Audio' }).first()
