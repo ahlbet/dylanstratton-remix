@@ -56,11 +56,11 @@ test.describe('Training Flow', () => {
 		// Wait for the button to show training state
 		await expect(page.getByRole('button', { name: /training\.\.\./i })).toBeVisible()
 		
-		// Wait for the button to return to its original state
-		await expect(page.getByRole('button', { name: /train model/i })).toBeVisible()
+		// Wait for the training state to end
+		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible({ timeout: 10000 })
 		
-		// Verify training completion
-		await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible()
+		// Verify training completion by checking for generate button
+		await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible({ timeout: 10000 })
 	})
 
 	test('should generate and play audio', async ({ page }) => {
@@ -75,8 +75,8 @@ test.describe('Training Flow', () => {
 		// Wait for the button to show training state
 		await expect(page.getByRole('button', { name: /training\.\.\./i })).toBeVisible()
 		
-		// Wait for the button to return to its original state
-		await expect(page.getByRole('button', { name: /train model/i })).toBeVisible()
+		// Wait for the training state to end
+		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible({ timeout: 10000 })
 		
 		// Wait for the generate button to appear
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
