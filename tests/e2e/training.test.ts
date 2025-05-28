@@ -52,7 +52,12 @@ test.describe('Training Flow', () => {
 
 		// Click train button and wait for training completion
 		await page.getByRole('button', { name: /train model/i }).click()
-		await expect(page.getByRole('button', { name: /training/i })).toBeVisible()
+		
+		// Wait for the button to show training state
+		await expect(page.getByRole('button', { name: /training\.\.\./i })).toBeVisible()
+		
+		// Wait for the button to return to its original state
+		await expect(page.getByRole('button', { name: /train model/i })).toBeVisible()
 		
 		// Verify training completion
 		await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible()
@@ -63,30 +68,26 @@ test.describe('Training Flow', () => {
 		const testAudioPath = 'tests/fixtures/test-audio.wav'
 		await page.setInputFiles('input[type="file"]', testAudioPath)
 		
-		// Start training and wait for it to complete
+		// Start training
 		const trainButton = page.getByRole('button', { name: /train model/i })
 		await trainButton.click()
 		
-		// Wait for the form submission to start
+		// Wait for the button to show training state
 		await expect(page.getByRole('button', { name: /training\.\.\./i })).toBeVisible()
 		
-		// Wait for the form submission to complete and navigation to be idle
-		await page.waitForFunction(() => {
-			const navigation = document.querySelector('[data-testid="navigation-state"]')
-			return navigation?.textContent === 'idle'
-		}, { timeout: 10000 })
+		// Wait for the button to return to its original state
+		await expect(page.getByRole('button', { name: /train model/i })).toBeVisible()
 		
-		// Wait for the training state to complete
-		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible()
-		
-		// Now wait for the generate button to appear and be enabled
+		// Wait for the generate button to appear
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
 		await expect(generateButton).toBeVisible({ timeout: 10000 })
 		await expect(generateButton).toBeEnabled({ timeout: 10000 })
 
 		// Generate audio
 		await generateButton.click()
-		await page.waitForLoadState('networkidle')
+		
+		// Wait for the generating state
+		await expect(page.getByRole('button', { name: /generating\.\.\./i })).toBeVisible()
 		
 		// Wait for the Generated Audio section to appear and be ready
 		const generatedSection = page.locator('div.rounded-lg.border', { hasText: 'Generated Audio' }).first()
