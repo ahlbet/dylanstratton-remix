@@ -51,10 +51,16 @@ test.describe('Training Flow', () => {
 		await expect(page.getByText(/file\(s\) selected/i)).toBeVisible()
 
 		// Click train button and wait for training completion
-		await page.getByRole('button', { name: /train model/i }).click()
+		const trainButton = page.getByRole('button', { name: /train model/i })
 		
-		// Wait for the button to show training state
-		await expect(page.getByRole('button', { name: /training\.\.\./i })).toBeVisible()
+		// Submit the form and wait for the response
+		const responsePromise = page.waitForResponse(async response => {
+			if (!response.url().includes('/training')) return false
+			const text = await response.text()
+			return text.includes('"success":true') && text.includes('"savedFiles":[{')
+		})
+		await trainButton.click()
+		await responsePromise
 		
 		// Wait for the training state to end
 		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible({ timeout: 10000 })
@@ -70,10 +76,15 @@ test.describe('Training Flow', () => {
 		
 		// Start training
 		const trainButton = page.getByRole('button', { name: /train model/i })
-		await trainButton.click()
 		
-		// Wait for the button to show training state
-		await expect(page.getByRole('button', { name: /training\.\.\./i })).toBeVisible()
+		// Submit the form and wait for the response
+		const responsePromise = page.waitForResponse(async response => {
+			if (!response.url().includes('/training')) return false
+			const text = await response.text()
+			return text.includes('"success":true') && text.includes('"savedFiles":[{')
+		})
+		await trainButton.click()
+		await responsePromise
 		
 		// Wait for the training state to end
 		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible({ timeout: 10000 })
