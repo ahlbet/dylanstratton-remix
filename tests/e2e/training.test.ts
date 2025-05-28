@@ -70,8 +70,9 @@ test.describe('Training Flow', () => {
 		])
 		
 		// Wait for the training process to complete
-		await expect(page.getByText('Training...')).toBeVisible()
-		await expect(page.getByText('Training...')).not.toBeVisible()
+		const trainButton = page.getByRole('button', { name: /training\.\.\./i })
+		await expect(trainButton).toBeVisible()
+		await expect(trainButton).not.toBeVisible()
 		
 		// Ensure we're back on the training page and model is trained
 		await page.waitForURL('/training')
