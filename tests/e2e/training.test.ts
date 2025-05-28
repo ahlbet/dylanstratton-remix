@@ -73,8 +73,8 @@ test.describe('Training Flow', () => {
 		// Wait for the form submission to complete
 		await page.waitForLoadState('networkidle')
 		
-		// Wait for the training button to be clickable again
-		await expect(page.getByRole('button', { name: /train model/i })).toBeEnabled()
+		// Wait for the training state to complete
+		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible()
 		
 		// Now wait for the generate button to appear and be enabled
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
