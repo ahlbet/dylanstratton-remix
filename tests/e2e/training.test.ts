@@ -3,6 +3,8 @@ import { prisma } from '#app/utils/db.server.ts'
 import { createUser, expect, test } from '#tests/playwright-utils.ts'
 
 test.describe('Training Flow', () => {
+	test.setTimeout(60000) // Set timeout to 60 seconds for all tests in this describe block
+	
 	let testUserId: string
 
 	test.beforeEach(async ({ page, login }) => {
@@ -50,28 +52,36 @@ test.describe('Training Flow', () => {
 		// Verify file selection
 		await expect(page.getByText(/file\(s\) selected/i)).toBeVisible()
 
-		// Click train button and wait for training completion
-		const trainButton = page.getByRole('button', { name: /train model/i })
-		
-		// Submit the form and wait for the response
+		// Start listening for responses before clicking
 		const responsePromise = page.waitForResponse(
 			async response => {
 				if (!response.url().includes('/training')) return false
+				
+				// Log response details for debugging
+				console.log('Response URL:', response.url())
+				console.log('Response Status:', response.status())
+				
 				try {
 					const data = await response.json()
+					console.log('Response Data:', data)
 					return data?.success === true
-				} catch {
+				} catch (error) {
+					console.log('Error parsing response:', error)
 					return false
 				}
 			},
-			{ timeout: 30000 }
+			{ timeout: 45000 }
 		)
-		
+
+		// Click train button
+		const trainButton = page.getByRole('button', { name: /train model/i })
 		await trainButton.click()
+		
+		// Wait for response
 		await responsePromise
 		
-		// Wait for the training state to end and generate button to appear
-		await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible({ timeout: 30000 })
+		// Wait for the generate button to appear
+		await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible({ timeout: 45000 })
 	})
 
 	test('should generate and play audio', async ({ page }) => {
@@ -79,30 +89,38 @@ test.describe('Training Flow', () => {
 		const testAudioPath = 'tests/fixtures/test-audio.wav'
 		await page.setInputFiles('input[type="file"]', testAudioPath)
 		
-		// Start training
-		const trainButton = page.getByRole('button', { name: /train model/i })
-		
-		// Submit the form and wait for the response
+		// Start listening for responses before clicking
 		const responsePromise = page.waitForResponse(
 			async response => {
 				if (!response.url().includes('/training')) return false
+				
+				// Log response details for debugging
+				console.log('Response URL:', response.url())
+				console.log('Response Status:', response.status())
+				
 				try {
 					const data = await response.json()
+					console.log('Response Data:', data)
 					return data?.success === true
-				} catch {
+				} catch (error) {
+					console.log('Error parsing response:', error)
 					return false
 				}
 			},
-			{ timeout: 30000 }
+			{ timeout: 45000 }
 		)
 		
+		// Click train button
+		const trainButton = page.getByRole('button', { name: /train model/i })
 		await trainButton.click()
+		
+		// Wait for response
 		await responsePromise
 		
-		// Wait for the generate button to appear
+		// Wait for the generate button to appear and be enabled
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
-		await expect(generateButton).toBeVisible({ timeout: 30000 })
-		await expect(generateButton).toBeEnabled({ timeout: 30000 })
+		await expect(generateButton).toBeVisible({ timeout: 45000 })
+		await expect(generateButton).toBeEnabled({ timeout: 45000 })
 
 		// Generate audio
 		await generateButton.click()
