@@ -247,6 +247,11 @@ export default function TrainingRoute() {
 					Welcome to your training dashboard!
 				</p>
 
+				{/* Hidden navigation state for testing */}
+				<div data-testid="navigation-state" className="hidden">
+					{navigation.state}
+				</div>
+
 				<div className="flex flex-col gap-8">
 					{/* File Upload Section */}
 					<div className="rounded-lg border-2 border-dashed border-gray-300 p-6">
