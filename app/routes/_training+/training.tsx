@@ -18,10 +18,13 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 // Server-side only import
-const getAudioDuration =
-	process.env.NODE_ENV === 'production'
-		? require('get-audio-duration').getAudioDuration
-		: async (filePath: string) => 0 // Mock for development
+const getAudioDuration = async (filePath: string): Promise<number> => {
+	if (process.env.NODE_ENV === 'production') {
+		const { getAudioDuration } = await import('get-audio-duration')
+		return getAudioDuration(filePath)
+	}
+	return 0 // Mock for development
+}
 
 const ClientAudioPlayer = React.lazy(() =>
 	import('../../components/audio-player.client.tsx').then((mod) => ({
