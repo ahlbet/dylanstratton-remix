@@ -5,6 +5,7 @@ import {
 	Form,
 	useNavigation,
 	useActionData,
+	useLoaderData,
 } from 'react-router'
 import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
@@ -12,8 +13,15 @@ import { invariantResponse } from '@epic-web/invariant'
 import { GeneralErrorBoundary } from '../../components/error-boundary.tsx'
 import { Icon } from '../../components/ui/icon.tsx'
 import { StatusButton } from '../../components/ui/status-button.tsx'
+import { Button } from '../../components/ui/button.tsx'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+
+// Server-side only import
+const getAudioDuration =
+	process.env.NODE_ENV === 'production'
+		? require('get-audio-duration').getAudioDuration
+		: async (filePath: string) => 0 // Mock for development
 
 const ClientAudioPlayer = React.lazy(() =>
 	import('../../components/audio-player.client.tsx').then((mod) => ({
@@ -23,7 +31,22 @@ const ClientAudioPlayer = React.lazy(() =>
 
 export async function loader({ request }: { request: Request }) {
 	const userId = await requireUserWithRole(request, 'admin')
-	const user = await prisma.user.findUnique({ where: { id: userId } })
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		include: {
+			trainingAudio: {
+				orderBy: { createdAt: 'desc' },
+				select: {
+					id: true,
+					filename: true,
+					objectKey: true,
+					duration: true,
+					fileSize: true,
+					createdAt: true,
+				},
+			},
+		},
+	})
 	invariantResponse(user, 'User not found', { status: 404 })
 	return { user }
 }
@@ -41,16 +64,38 @@ export async function action({ request }: { request: Request }) {
 			// Ensure upload directory exists
 			await fs.mkdir(uploadDir, { recursive: true })
 
-			// Save each file
-			for (const file of files) {
-				if (file instanceof File) {
-					const buffer = Buffer.from(await file.arrayBuffer())
-					const filename = `${Date.now()}-${file.name}`
-					await fs.writeFile(path.join(uploadDir, filename), buffer)
-				}
-			}
+			// Process and save each file
+			const savedFiles = await Promise.all(
+				files.map(async (file) => {
+					if (file instanceof File) {
+						const buffer = Buffer.from(await file.arrayBuffer())
+						const filename = `${Date.now()}-${file.name}`
+						const filePath = path.join(uploadDir, filename)
 
-			return { success: true }
+						// Save file to disk
+						await fs.writeFile(filePath, buffer)
+
+						// Get audio duration
+						const duration = await getAudioDuration(filePath)
+
+						// Save metadata to database
+						const trainingAudio = await prisma.trainingAudio.create({
+							data: {
+								filename: file.name,
+								objectKey: `/audio-uploads/${filename}`,
+								duration,
+								fileSize: file.size,
+								mimeType: file.type,
+								userId,
+							},
+						})
+
+						return trainingAudio
+					}
+				}),
+			)
+
+			return { success: true, savedFiles }
 		}
 		case 'generate': {
 			// For testing, we'll use one of the uploaded files
@@ -69,6 +114,43 @@ export async function action({ request }: { request: Request }) {
 				audioUrl: `/audio-uploads/${latestFile}`,
 				timestamp: new Date().toISOString(),
 			}
+		}
+		case 'delete': {
+			const audioId = formData.get('audioId')
+			if (typeof audioId !== 'string') {
+				throw new Error('Audio ID is required')
+			}
+
+			// Get the audio file info
+			const audio = await prisma.trainingAudio.findUnique({
+				where: { id: audioId },
+				select: { objectKey: true, userId: true },
+			})
+
+			if (!audio) {
+				throw new Error('Audio file not found')
+			}
+
+			// Ensure user owns this file
+			if (audio.userId !== userId) {
+				throw new Error('Not authorized')
+			}
+
+			// Delete the file from disk
+			const filePath = path.join(process.cwd(), 'public', audio.objectKey)
+			try {
+				await fs.unlink(filePath)
+			} catch (error) {
+				console.error('Error deleting file:', error)
+				// Continue even if file deletion fails - file might have been manually deleted
+			}
+
+			// Delete the database record
+			await prisma.trainingAudio.delete({
+				where: { id: audioId },
+			})
+
+			return { success: true, deletedId: audioId }
 		}
 		default: {
 			throw new Error('Invalid intent')
@@ -92,6 +174,7 @@ function ErrorBoundary() {
 }
 
 export default function TrainingRoute() {
+	const { user } = useLoaderData<typeof loader>()
 	const navigation = useNavigation()
 	const actionData = useActionData<typeof action>()
 	const [selectedFiles, setSelectedFiles] = React.useState<FileList | null>(
@@ -102,9 +185,16 @@ export default function TrainingRoute() {
 		url: string
 		timestamp: string
 	} | null>(null)
+	const [selectedHistoricalAudio, setSelectedHistoricalAudio] = React.useState<{
+		url: string
+		timestamp: string
+	} | null>(null)
 	const isPending = navigation.state === 'submitting'
 	const pendingIntent = isPending
 		? navigation.formData?.get('intent')?.toString()
+		: null
+	const pendingDeleteId = isPending
+		? navigation.formData?.get('audioId')?.toString()
 		: null
 	const formRef = React.useRef<HTMLFormElement>(null)
 
@@ -135,6 +225,17 @@ export default function TrainingRoute() {
 			})
 		}
 	}, [navigation.state, actionData])
+
+	const formatDuration = (seconds: number) => {
+		const minutes = Math.floor(seconds / 60)
+		const remainingSeconds = Math.floor(seconds % 60)
+		return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+	}
+
+	const formatFileSize = (bytes: number) => {
+		const mb = bytes / (1024 * 1024)
+		return `${mb.toFixed(2)} MB`
+	}
 
 	return (
 		<div className="container flex min-h-[400px] flex-1 px-0 pb-12 md:px-8">
@@ -211,14 +312,37 @@ export default function TrainingRoute() {
 						</div>
 					</div>
 
-					{/* Audio Player */}
+					{/* Generated Audio Player */}
 					{generatedAudio && (
-						<React.Suspense fallback={<div>Loading audio player...</div>}>
-							<ClientAudioPlayer
-								src={generatedAudio.url}
-								timestamp={generatedAudio.timestamp}
-							/>
-						</React.Suspense>
+						<div className="rounded-lg border border-gray-200 p-4">
+							<h2 className="mb-4 text-lg font-medium">Generated Audio</h2>
+							<React.Suspense fallback={<div>Loading audio player...</div>}>
+								<ClientAudioPlayer
+									src={generatedAudio.url}
+									timestamp={generatedAudio.timestamp}
+								/>
+							</React.Suspense>
+						</div>
+					)}
+
+					{/* Historical Training Audio Files */}
+					{user.trainingAudio.length > 0 && (
+						<div className="border-gray-20 rounded-lg border p-4">
+							<h2 className="mb-4 text-lg font-medium">Past Samples</h2>
+							<div className="flex flex-col gap-4">
+								{user.trainingAudio.map((audio) => (
+									<React.Suspense
+										key={audio.id}
+										fallback={<div>Loading audio player...</div>}
+									>
+										<ClientAudioPlayer
+											src={audio.objectKey}
+											timestamp={audio.createdAt.toISOString()}
+										/>
+									</React.Suspense>
+								))}
+							</div>
+						</div>
 					)}
 				</div>
 

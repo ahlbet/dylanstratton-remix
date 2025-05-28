@@ -20,13 +20,14 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  image       UserImage?
-  password    Password?
-  notes       Note[]
-  roles       Role[]
-  sessions    Session[]
-  connections Connection[]
-  passkey     Passkey[]
+  image         UserImage?
+  password      Password?
+  notes         Note[]
+  roles         Role[]
+  sessions      Session[]
+  connections   Connection[]
+  passkey       Passkey[]
+  trainingAudio TrainingAudio[]
 }
 
 model Note {
@@ -183,4 +184,24 @@ model Passkey {
   transports     String? // Stored as comma-separated values
 
   @@index(userId)
+}
+
+model TrainingAudio {
+  id        String @id @default(cuid())
+  filename  String
+  objectKey String // For storing the file path or S3 key
+  duration  Float // Duration in seconds
+  fileSize  Int // Size in bytes
+  mimeType  String // e.g. "audio/wav"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId String
+
+  // non-unique foreign key
+  @@index([userId])
+  // This helps with ordering by date
+  @@index([userId, createdAt])
 }
