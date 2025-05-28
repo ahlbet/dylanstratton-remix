@@ -133,6 +133,7 @@ export function AudioPlayer({ src, timestamp }: AudioPlayerProps) {
 					<Button
 						variant="ghost"
 						size="sm"
+						className="text-gray-700 hover:text-white"
 						onClick={() => {
 							const link = document.createElement('a')
 							link.href = src
