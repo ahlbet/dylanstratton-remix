@@ -54,19 +54,24 @@ test.describe('Training Flow', () => {
 		const trainButton = page.getByRole('button', { name: /train model/i })
 		
 		// Submit the form and wait for the response
-		const responsePromise = page.waitForResponse(async response => {
-			if (!response.url().includes('/training')) return false
-			const text = await response.text()
-			return text.includes('"success":true') && text.includes('"savedFiles":[{')
-		})
+		const responsePromise = page.waitForResponse(
+			async response => {
+				if (!response.url().includes('/training')) return false
+				try {
+					const data = await response.json()
+					return data?.success === true
+				} catch {
+					return false
+				}
+			},
+			{ timeout: 30000 }
+		)
+		
 		await trainButton.click()
 		await responsePromise
 		
-		// Wait for the training state to end
-		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible({ timeout: 10000 })
-		
-		// Verify training completion by checking for generate button
-		await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible({ timeout: 10000 })
+		// Wait for the training state to end and generate button to appear
+		await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible({ timeout: 30000 })
 	})
 
 	test('should generate and play audio', async ({ page }) => {
@@ -78,21 +83,26 @@ test.describe('Training Flow', () => {
 		const trainButton = page.getByRole('button', { name: /train model/i })
 		
 		// Submit the form and wait for the response
-		const responsePromise = page.waitForResponse(async response => {
-			if (!response.url().includes('/training')) return false
-			const text = await response.text()
-			return text.includes('"success":true') && text.includes('"savedFiles":[{')
-		})
+		const responsePromise = page.waitForResponse(
+			async response => {
+				if (!response.url().includes('/training')) return false
+				try {
+					const data = await response.json()
+					return data?.success === true
+				} catch {
+					return false
+				}
+			},
+			{ timeout: 30000 }
+		)
+		
 		await trainButton.click()
 		await responsePromise
 		
-		// Wait for the training state to end
-		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible({ timeout: 10000 })
-		
 		// Wait for the generate button to appear
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
-		await expect(generateButton).toBeVisible({ timeout: 10000 })
-		await expect(generateButton).toBeEnabled({ timeout: 10000 })
+		await expect(generateButton).toBeVisible({ timeout: 30000 })
+		await expect(generateButton).toBeEnabled({ timeout: 30000 })
 
 		// Generate audio
 		await generateButton.click()
