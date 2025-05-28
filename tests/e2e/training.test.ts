@@ -65,17 +65,28 @@ test.describe('Training Flow', () => {
 		
 		// Start training and wait for it to complete
 		const trainButton = page.getByRole('button', { name: /train model/i })
+		
+		// Wait for both the response and the success state
 		await Promise.all([
-			page.waitForResponse(response => 
-				response.url().includes('/training') && 
-				response.request().method() === 'POST'
-			),
+			page.waitForResponse(async response => {
+				if (!response.url().includes('/training') || response.request().method() !== 'POST') {
+					return false
+				}
+				const data = await response.json()
+				return data.success === true
+			}),
 			trainButton.click()
 		])
 		
 		// Wait for the form submission to complete and the page to be ready
 		await page.waitForURL('/training')
 		await page.waitForLoadState('networkidle')
+		
+		// Wait for the success state to be reflected in the UI
+		await page.waitForFunction(() => {
+			const button = document.querySelector('button[name="intent"][value="generate"]')
+			return button && !button.hasAttribute('disabled')
+		}, { timeout: 10000 })
 		
 		// Now wait for the generate button to appear and be enabled
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
