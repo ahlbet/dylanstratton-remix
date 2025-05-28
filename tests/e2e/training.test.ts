@@ -65,12 +65,22 @@ test.describe('Training Flow', () => {
 		
 		// Start training and wait for it to complete
 		const trainButton = page.getByRole('button', { name: /train model/i })
-		await trainButton.click()
 		
-		// Wait for the form submission to complete
+		// Submit the form and wait for the response
+		const responsePromise = page.waitForResponse(response => 
+			response.url().includes('/training') && 
+			response.request().method() === 'POST'
+		)
+		await trainButton.click()
+		const response = await responsePromise
+		
+		// Wait for the form submission to complete and page to be ready
 		await page.waitForLoadState('networkidle')
 		
-		// Wait for the success state to be reflected in the UI by checking for the generate button
+		// Wait for the success state to be reflected in the UI
+		await page.waitForSelector('[data-success="true"]', { timeout: 10000 })
+		
+		// Now wait for the generate button to appear and be enabled
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
 		await expect(generateButton).toBeVisible({ timeout: 10000 })
 		await expect(generateButton).toBeEnabled({ timeout: 10000 })

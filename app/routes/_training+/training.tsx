@@ -261,6 +261,7 @@ export default function TrainingRoute() {
 								method="POST"
 								encType="multipart/form-data"
 								onSubmit={() => setSelectedFiles(null)}
+								data-success={actionData?.success}
 							>
 								<input
 									type="file"
