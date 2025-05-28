@@ -73,8 +73,12 @@ test.describe('Training Flow', () => {
 		// Wait for the form submission to complete
 		await page.waitForLoadState('networkidle')
 		
-		// Wait for the training state to complete
+		// Wait for the training state to complete and the page to update
 		await expect(page.getByRole('button', { name: /training\.\.\./i })).not.toBeVisible()
+		await page.waitForLoadState('networkidle')
+		
+		// Wait for the Past Samples section to appear (indicating files were saved)
+		await expect(page.getByRole('heading', { name: 'Past Samples' })).toBeVisible({ timeout: 10000 })
 		
 		// Now wait for the generate button to appear and be enabled
 		const generateButton = page.getByRole('button', { name: /generate audio/i })
