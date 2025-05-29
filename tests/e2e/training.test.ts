@@ -98,35 +98,70 @@ test.describe('Training Flow', () => {
 						const body = await response.json()
 						lastResponseBody = JSON.stringify(body, null, 2)
 						console.log('Training response:', lastResponseBody)
+						
+						// Check for Remix error format
+						if (Array.isArray(body) && body.includes('error')) {
+							console.log('Detected Remix error response')
+							const errorIndex = body.indexOf('error')
+							if (body[errorIndex + 1] && Array.isArray(body[errorIndex + 1])) {
+								const errorData = body[errorIndex + 1] as string[]
+								const [errorType, ...errorDetails] = errorData
+								console.log('Error type:', errorType)
+								console.log('Error details:', errorDetails)
+							}
+						}
 					} else {
 						const text = await response.text()
 						lastResponseBody = text
 						console.log('Training response (text):', text)
 					}
 					console.log('Response status:', response.status())
+					
+					// Log response headers for debugging
+					console.log('Response headers:', response.headers())
 				} catch (e) {
 					console.log('Error parsing response:', e)
 				}
 			}
 		})
 
+		// Also listen for console messages that might indicate server errors
+		page.on('console', msg => {
+			if (msg.type() === 'error') {
+				console.log('Browser console error:', msg.text())
+			}
+		})
+
 		// Click and wait for navigation
 		await trainButton.click()
 		console.log('After click - Button clicked')
-		await navigationPromise
-		console.log('Navigation completed')
-		
-		// Wait for network idle to ensure all requests are complete
-		await page.waitForLoadState('networkidle')
-		console.log('Network is idle')
 
 		try {
+			// Wait for navigation with error handling
+			await Promise.race([
+				navigationPromise,
+				page.waitForSelector('[data-error-type="SanitizedError"]', { timeout: 5000 })
+					.then(() => { throw new Error('Server error detected') })
+			])
+			console.log('Navigation completed')
+			
+			// Wait for network idle to ensure all requests are complete
+			await page.waitForLoadState('networkidle')
+			console.log('Network is idle')
+
 			// Check for error messages
 			const errorLocator = page.getByText(/error|failed/i)
 			const hasError = await errorLocator.isVisible()
 			
 			if (hasError) {
 				console.log('Found error state')
+				
+				// Get error details from Remix error boundary if present
+				const errorBoundaryText = await page.locator('[data-error-boundary]').allTextContents()
+				if (errorBoundaryText.length > 0) {
+					console.log('Error boundary content:', errorBoundaryText)
+				}
+				
 				// Get all error related text
 				const errorMessages = await page.getByRole('alert').allTextContents()
 				console.log('Error messages:', errorMessages)
@@ -139,6 +174,15 @@ test.describe('Training Flow', () => {
 					return Object.fromEntries(formData.entries())
 				})
 				console.log('Form data:', formData)
+
+				// Get any server-side error details that might be in the DOM
+				const serverError = await page.evaluate(() => {
+					const errorElement = document.querySelector('[data-server-error]')
+					return errorElement ? errorElement.textContent : null
+				})
+				if (serverError) {
+					console.log('Server error details:', serverError)
+				}
 				
 				// Take error screenshot
 				await page.screenshot({ path: 'test-artifacts/error-state.png' })
@@ -147,7 +191,7 @@ test.describe('Training Flow', () => {
 				const html = await page.content()
 				await require('fs').promises.writeFile('test-artifacts/error-state.html', html)
 				
-				throw new Error(`Training failed: ${errorMessages.join(', ')}. Last response: ${lastResponseBody}`)
+				throw new Error(`Training failed: ${errorMessages.join(', ')}. Server error: ${serverError || 'Unknown'}. Last response: ${lastResponseBody}`)
 			}
 
 			// Wait for success indicators with a longer timeout for CI
