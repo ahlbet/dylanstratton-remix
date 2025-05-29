@@ -65,12 +65,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		}
 
 		const contentLength = end - start + 1
-		console.log('Serving range:', {
-			start,
-			end,
-			contentLength,
-			fileSize
-		})
 
 		// Read the requested range
 		const handle = await fs.open(filePath, 'r')
