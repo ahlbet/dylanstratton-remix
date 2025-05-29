@@ -85,14 +85,11 @@ export async function action({ request }: { request: Request }) {
 
 	switch (intent) {
 		case 'train': {
-			console.log('Starting file upload process...')
 			const files = formData.getAll('audioFiles')
 			const uploadDir = path.join(process.cwd(), 'public', 'audio-uploads')
 
 			// Validate files
-			console.log('Validating files...', { fileCount: files.length })
 			if (files.length === 0) {
-				console.log('No files provided')
 				return { success: false, error: 'No files were provided' }
 			}
 
@@ -103,39 +100,25 @@ export async function action({ request }: { request: Request }) {
 					(file.type === 'audio/wav' ||
 						file.type === 'audio/wave' ||
 						file.name.toLowerCase().endsWith('.wav'))
-				console.log('File validation:', {
-					name: file instanceof File ? file.name : 'unknown',
-					type: file instanceof File ? file.type : 'unknown',
-					isValid,
-				})
 				return isValid
 			})
 
 			if (validFiles.length === 0) {
-				console.log('No valid files found')
 				return { success: false, error: 'No valid files were provided' }
 			}
 
 			if (validFiles.length !== files.length) {
-				console.log('Some files were invalid', {
-					total: files.length,
-					valid: validFiles.length,
-				})
 				return { success: false, error: 'Some files were invalid' }
 			}
 
 			// Ensure upload directory exists
-			console.log('Creating upload directory...', { path: uploadDir })
 			await fs.mkdir(uploadDir, { recursive: true })
 
 			// Process and save each file
-			console.log('Processing files...', { count: validFiles.length })
 			const savedFiles = []
 			for (const file of validFiles) {
 				try {
-					console.log('Processing file:', { name: file.name, size: file.size })
 					const buffer = Buffer.from(await file.arrayBuffer())
-					console.log('File buffer created:', { size: buffer.length })
 
 					// Add index and random string to ensure unique filenames
 					const timestamp = Date.now()
@@ -143,23 +126,17 @@ export async function action({ request }: { request: Request }) {
 					const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
 					const filename = `${timestamp}-${randomStr}-${sanitizedName}`
 					const filePath = path.join(uploadDir, filename)
-					console.log('Generated file path:', { path: filePath })
 
 					// Save file to disk
-					console.log('Writing file to disk...')
 					await fs.writeFile(filePath, buffer)
-					console.log('File written successfully')
 
 					// Get audio duration - use mock in development/test
-					console.log('Getting audio duration...')
 					const duration =
 						process.env.NODE_ENV === 'production'
 							? await getAudioDuration(filePath)
 							: 0
-					console.log('Audio duration:', { duration })
 
 					// Save metadata to database
-					console.log('Saving to database...')
 					const trainingAudio = await prisma.trainingAudio.create({
 						data: {
 							filename: file.name,
@@ -170,7 +147,6 @@ export async function action({ request }: { request: Request }) {
 							userId,
 						},
 					})
-					console.log('Database record created:', { id: trainingAudio.id })
 
 					savedFiles.push(trainingAudio)
 				} catch (error) {
@@ -180,10 +156,6 @@ export async function action({ request }: { request: Request }) {
 			}
 
 			// Check if any files were saved successfully
-			console.log('File processing complete:', {
-				savedCount: savedFiles.length,
-				totalFiles: validFiles.length,
-			})
 			if (savedFiles.length > 0) {
 				return { success: true, savedFiles }
 			}
