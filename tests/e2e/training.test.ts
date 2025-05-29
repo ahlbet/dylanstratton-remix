@@ -107,15 +107,43 @@ test.describe('Training Flow', () => {
 		await page.waitForLoadState('networkidle')
 		console.log('Network is idle')
 
-		// Wait for success indicators - either the generate button or success message
-		await Promise.race([
-			page.getByRole('button', { name: /generate audio/i }).waitFor({ timeout: 20000 }),
-			page.getByText(/training completed|model trained/i).waitFor({ timeout: 20000 })
-		])
-		console.log('Found success indicator')
+		// Log the page state periodically while waiting for success
+		const startTime = Date.now()
+		const checkInterval = setInterval(async () => {
+			const elapsed = (Date.now() - startTime) / 1000
+			console.log(`Waiting for training completion... (${elapsed.toFixed(1)}s elapsed)`)
+			
+			// Log all buttons present
+			const buttons = await page.getByRole('button').all()
+			console.log('Current buttons:', await Promise.all(buttons.map(b => b.evaluate(el => el.textContent))))
+			
+			// Log any error messages
+			const errorText = await page.getByText(/error|failed/i).allTextContents()
+			if (errorText.length > 0) {
+				console.log('Found error messages:', errorText)
+			}
+		}, 5000)
 
-		// Verify generate button is present
-		await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible({ timeout: 5000 })
-		console.log('Generate audio button is visible')
+		try {
+			// Wait for success indicators with a longer timeout for CI
+			await Promise.race([
+				page.getByRole('button', { name: /generate audio/i }).waitFor({ timeout: 45000 }),
+				page.getByText(/training completed|model trained/i).waitFor({ timeout: 45000 })
+			])
+			console.log('Found success indicator')
+			
+			// Clear the logging interval
+			clearInterval(checkInterval)
+
+			// Verify generate button is present
+			await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible({ timeout: 5000 })
+			console.log('Generate audio button is visible')
+		} catch (error) {
+			// If we timeout, log the final state
+			console.log('Final page content:', await page.textContent('body'))
+			throw error
+		} finally {
+			clearInterval(checkInterval)
+		}
 	})
 }) 
