@@ -82,21 +82,34 @@ test.describe('Training Flow', () => {
 		await expect(trainButton).toBeEnabled()
 		console.log('Train button is enabled')
 		
-		// Start listening to network requests
-		let trainingStarted = false
-		page.on('request', request => {
-			if (request.url().includes('/training')) {
-				console.log('Training request started:', request.url())
-				trainingStarted = true
-			}
-		})
-
 		// Click train button and log its state
 		console.log('Before click - Button text:', await trainButton.evaluate(el => el.textContent))
 		
-		// Start watching for navigation before clicking
+		// Start watching for navigation and network requests
 		const navigationPromise = page.waitForURL(/\/training/)
+		let lastResponseBody = ''
 		
+		// Listen for all responses to catch errors
+		page.on('response', async response => {
+			if (response.url().includes('/training')) {
+				try {
+					const contentType = response.headers()['content-type'] || ''
+					if (contentType.includes('application/json')) {
+						const body = await response.json()
+						lastResponseBody = JSON.stringify(body, null, 2)
+						console.log('Training response:', lastResponseBody)
+					} else {
+						const text = await response.text()
+						lastResponseBody = text
+						console.log('Training response (text):', text)
+					}
+					console.log('Response status:', response.status())
+				} catch (e) {
+					console.log('Error parsing response:', e)
+				}
+			}
+		})
+
 		// Click and wait for navigation
 		await trainButton.click()
 		console.log('After click - Button clicked')
@@ -107,49 +120,50 @@ test.describe('Training Flow', () => {
 		await page.waitForLoadState('networkidle')
 		console.log('Network is idle')
 
-		// Take a screenshot after navigation
-		await page.screenshot({ path: 'test-artifacts/after-navigation.png' })
-
-		// Log the page state periodically while waiting for success
-		const startTime = Date.now()
-		const checkInterval = setInterval(async () => {
-			const elapsed = (Date.now() - startTime) / 1000
-			console.log(`Waiting for training completion... (${elapsed.toFixed(1)}s elapsed)`)
+		try {
+			// Check for error messages
+			const errorLocator = page.getByText(/error|failed/i)
+			const hasError = await errorLocator.isVisible()
 			
-			// Log all buttons present
-			const buttons = await page.getByRole('button').all()
-			console.log('Current buttons:', await Promise.all(buttons.map(b => b.evaluate(el => el.textContent))))
-			
-			// Log any error messages
-			const errorText = await page.getByText(/error|failed/i).allTextContents()
-			if (errorText.length > 0) {
-				console.log('Found error messages:', errorText)
+			if (hasError) {
+				console.log('Found error state')
+				// Get all error related text
+				const errorMessages = await page.getByRole('alert').allTextContents()
+				console.log('Error messages:', errorMessages)
+				
+				// Get form state
+				const formData = await page.evaluate(() => {
+					const form = document.querySelector('form')
+					if (!form) return null
+					const formData = new FormData(form)
+					return Object.fromEntries(formData.entries())
+				})
+				console.log('Form data:', formData)
+				
+				// Take error screenshot
+				await page.screenshot({ path: 'test-artifacts/error-state.png' })
+				
+				// Save page HTML
+				const html = await page.content()
+				await require('fs').promises.writeFile('test-artifacts/error-state.html', html)
+				
+				throw new Error(`Training failed: ${errorMessages.join(', ')}. Last response: ${lastResponseBody}`)
 			}
 
-			// Take periodic screenshots
-			await page.screenshot({ path: `test-artifacts/waiting-${elapsed.toFixed(0)}s.png` })
-		}, 5000)
-
-		try {
 			// Wait for success indicators with a longer timeout for CI
 			await Promise.race([
 				page.getByRole('button', { name: /generate audio/i }).waitFor({ timeout: 45000 }),
 				page.getByText(/training completed|model trained/i).waitFor({ timeout: 45000 })
 			])
 			console.log('Found success indicator')
-			
-			// Clear the logging interval
-			clearInterval(checkInterval)
-
-			// Take a success screenshot
-			await page.screenshot({ path: 'test-artifacts/success.png' })
 
 			// Verify generate button is present
 			await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible({ timeout: 5000 })
 			console.log('Generate audio button is visible')
 		} catch (error) {
-			// If we timeout, capture the final state
+			// If we timeout or encounter an error, capture the final state
 			console.log('Final page content:', await page.textContent('body'))
+			console.log('Last response received:', lastResponseBody)
 			
 			// Take a failure screenshot
 			await page.screenshot({ path: 'test-artifacts/failure.png' })
@@ -159,8 +173,6 @@ test.describe('Training Flow', () => {
 			await require('fs').promises.writeFile('test-artifacts/failure.html', html)
 			
 			throw error
-		} finally {
-			clearInterval(checkInterval)
 		}
 	})
 
