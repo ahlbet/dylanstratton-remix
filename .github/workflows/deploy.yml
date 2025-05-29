@@ -112,6 +112,9 @@ jobs:
       - name: 📥 Install Playwright Browsers
         run: npm run test:e2e:install
 
+      - name: 📥 Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: 🛠 Setup Database
         run: npx prisma migrate deploy && npx prisma generate --sql
 
@@ -132,6 +135,9 @@ jobs:
       - name: 🏗 Build
         run: npm run build
 
+      - name: Create test artifacts directory
+        run: mkdir -p test-artifacts
+
       - name: 🎭 Playwright tests
         run: npx playwright test
 
@@ -140,7 +146,10 @@ jobs:
         if: always()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            test-artifacts/
+            playwright-report/
+            test-results/
           retention-days: 30
 
   container:

@@ -9,41 +9,23 @@ interface AudioPlayerProps {
 
 export function AudioPlayer({ src, timestamp }: AudioPlayerProps) {
 	const [isPlaying, setIsPlaying] = React.useState(false)
+	const [isLoaded, setIsLoaded] = React.useState(false)
 	const [currentTime, setCurrentTime] = React.useState(0)
 	const [duration, setDuration] = React.useState(0)
-	const [isLoaded, setIsLoaded] = React.useState(false)
 	const audioRef = React.useRef<HTMLAudioElement>(null)
 
-	// Initialize audio element when component mounts
-	React.useEffect(() => {
+	const handleLoad = () => {
 		if (audioRef.current) {
-			const audio = audioRef.current
-
-			const handleLoad = () => {
-				setDuration(audio.duration)
-				setIsLoaded(true)
-			}
-
-			const handleTimeUpdate = () => {
-				setCurrentTime(audio.currentTime)
-			}
-
-			// Add event listeners
-			audio.addEventListener('loadeddata', handleLoad)
-			audio.addEventListener('durationchange', handleLoad)
-			audio.addEventListener('timeupdate', handleTimeUpdate)
-
-			// Load the audio
-			void audio.load()
-
-			// Cleanup
-			return () => {
-				audio.removeEventListener('loadeddata', handleLoad)
-				audio.removeEventListener('durationchange', handleLoad)
-				audio.removeEventListener('timeupdate', handleTimeUpdate)
-			}
+			setDuration(audioRef.current.duration)
+			setIsLoaded(true)
 		}
-	}, [src])
+	}
+
+	const handleTimeUpdate = React.useCallback(() => {
+		if (audioRef.current) {
+			setCurrentTime(audioRef.current.currentTime)
+		}
+	}, [])
 
 	const handlePlayPause = async () => {
 		if (!audioRef.current) return
@@ -90,7 +72,7 @@ export function AudioPlayer({ src, timestamp }: AudioPlayerProps) {
 	return (
 		<div className="mt-6 rounded-lg bg-gray-100 p-4">
 			<div className="mb-2 flex items-center justify-between">
-				<h3 className="text-sm font-medium">Generated Audio</h3>
+				<h3 className="text-sm font-medium">Audio Sample</h3>
 				<span className="text-xs text-gray-500">
 					{new Date(timestamp).toLocaleString()}
 				</span>
@@ -100,49 +82,59 @@ export function AudioPlayer({ src, timestamp }: AudioPlayerProps) {
 					ref={audioRef}
 					src={src}
 					preload="auto"
+					onLoadedData={handleLoad}
+					onDurationChange={handleLoad}
+					onTimeUpdate={handleTimeUpdate}
 					onEnded={() => setIsPlaying(false)}
+					controls
+					style={{ display: 'block' }}
 				/>
-				<div
-					className="h-2 w-full cursor-pointer overflow-hidden rounded-full bg-gray-200"
-					onClick={handleProgressBarClick}
-				>
-					<div
-						className="h-full bg-indigo-600 transition-all duration-100"
-						style={{
-							width: `${progressPercent}%`,
-						}}
-					/>
-				</div>
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-4">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={handlePlayPause}
-							className="flex-shrink-0 bg-white hover:bg-gray-100"
+				{isLoaded && (
+					<>
+						<div
+							className="h-2 w-full cursor-pointer overflow-hidden rounded-full bg-gray-200"
+							onClick={handleProgressBarClick}
 						>
-							<Icon
-								name={isPlaying ? 'pause' : 'play'}
-								className="size-4 text-gray-700"
+							<div
+								className="h-full bg-indigo-600 transition-all duration-100"
+								style={{
+									width: `${progressPercent}%`,
+								}}
 							/>
-						</Button>
-						<span className="text-sm text-gray-600 tabular-nums">
-							{formatTime(currentTime)} / {formatTime(duration)}
-						</span>
-					</div>
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => {
-							const link = document.createElement('a')
-							link.href = src
-							link.download = `generated-audio-${timestamp}.wav`
-							link.click()
-						}}
-					>
-						<Icon name="download" className="size-4" />
-					</Button>
-				</div>
+						</div>
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-4">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handlePlayPause}
+									className="flex-shrink-0 bg-white hover:bg-gray-100"
+								>
+									<Icon
+										name={isPlaying ? 'pause' : 'play'}
+										className="size-4 text-gray-700"
+									/>
+								</Button>
+								<span className="text-sm text-gray-600 tabular-nums">
+									{formatTime(currentTime)} / {formatTime(duration)}
+								</span>
+							</div>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="text-gray-700 hover:text-white"
+								onClick={() => {
+									const link = document.createElement('a')
+									link.href = src
+									link.download = `audio-${timestamp}.wav`
+									link.click()
+								}}
+							>
+								<Icon name="download" className="size-4" />
+							</Button>
+						</div>
+					</>
+				)}
 			</div>
 		</div>
 	)
