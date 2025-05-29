@@ -107,6 +107,9 @@ test.describe('Training Flow', () => {
 		await page.waitForLoadState('networkidle')
 		console.log('Network is idle')
 
+		// Take a screenshot after navigation
+		await page.screenshot({ path: 'test-artifacts/after-navigation.png' })
+
 		// Log the page state periodically while waiting for success
 		const startTime = Date.now()
 		const checkInterval = setInterval(async () => {
@@ -122,6 +125,9 @@ test.describe('Training Flow', () => {
 			if (errorText.length > 0) {
 				console.log('Found error messages:', errorText)
 			}
+
+			// Take periodic screenshots
+			await page.screenshot({ path: `test-artifacts/waiting-${elapsed.toFixed(0)}s.png` })
 		}, 5000)
 
 		try {
@@ -135,15 +141,34 @@ test.describe('Training Flow', () => {
 			// Clear the logging interval
 			clearInterval(checkInterval)
 
+			// Take a success screenshot
+			await page.screenshot({ path: 'test-artifacts/success.png' })
+
 			// Verify generate button is present
 			await expect(page.getByRole('button', { name: /generate audio/i })).toBeVisible({ timeout: 5000 })
 			console.log('Generate audio button is visible')
 		} catch (error) {
-			// If we timeout, log the final state
+			// If we timeout, capture the final state
 			console.log('Final page content:', await page.textContent('body'))
+			
+			// Take a failure screenshot
+			await page.screenshot({ path: 'test-artifacts/failure.png' })
+			
+			// Save page HTML for debugging
+			const html = await page.content()
+			await require('fs').promises.writeFile('test-artifacts/failure.html', html)
+			
 			throw error
 		} finally {
 			clearInterval(checkInterval)
+		}
+	})
+
+	test.afterEach(async ({ page }, testInfo) => {
+		// Capture trace only on failure
+		if (testInfo.status !== testInfo.expectedStatus) {
+			await page.screenshot({ path: `test-artifacts/${testInfo.title}-failure.png` })
+			console.log('Test failed, saving trace and other artifacts')
 		}
 	})
 }) 
