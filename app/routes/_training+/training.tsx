@@ -20,8 +20,13 @@ import path from 'node:path'
 // Server-side only import
 const getAudioDuration = async (filePath: string): Promise<number> => {
 	if (process.env.NODE_ENV === 'production') {
-		const { getAudioDuration: getDuration } = await import('get-audio-duration')
-		return getDuration(filePath)
+		type AudioDurationModule = {
+			getAudioDurationInSeconds: (path: string) => Promise<number>
+		}
+		const mod = (await import(
+			'get-audio-duration'
+		)) as unknown as AudioDurationModule
+		return mod.getAudioDurationInSeconds(filePath)
 	}
 	return 0 // Mock for development
 }
