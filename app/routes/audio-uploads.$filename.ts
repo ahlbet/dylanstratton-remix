@@ -1,6 +1,6 @@
-import type { LoaderFunctionArgs } from '@remix-run/server-runtime'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import  { type LoaderFunctionArgs } from '@remix-run/server-runtime'
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const filename = params.filename

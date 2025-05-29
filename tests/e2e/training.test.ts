@@ -1,12 +1,7 @@
-import { faker } from '@faker-js/faker'
-import { prisma } from '#app/utils/db.server.ts'
-import { createUser, expect, test } from '#tests/playwright-utils.ts'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-
-interface NodeJSError extends Error {
-	code?: string
-}
+import { prisma } from '#app/utils/db.server.ts'
+import { createUser, expect, test } from '#tests/playwright-utils.ts'
 
 function createTestWavFile(): Buffer {
 	// Audio parameters for web-compatible WAV
@@ -233,7 +228,7 @@ test.describe('Training Flow', () => {
 		})
 
 		// Wait for file input to be ready
-		const fileInput = page.locator('input[type="file"]')
+		const fileInput = page.getByTestId('file-input')
 		await expect(fileInput).toBeVisible()
 		await expect(fileInput).toBeEnabled()
 
@@ -246,7 +241,7 @@ test.describe('Training Flow', () => {
 		console.log('Initial form state:')
 		const formState = await page.evaluate(() => {
 			const form = document.querySelector('form')
-			const input = document.querySelector('input[type="file"]')
+			const input = document.querySelector('[data-testid="file-input"]')
 			return {
 				formExists: !!form,
 				inputExists: !!input,
@@ -265,7 +260,7 @@ test.describe('Training Flow', () => {
 
 			// Log file input state after setting files
 			const inputState = await page.evaluate(() => {
-				const input = document.querySelector('input[type="file"]') as HTMLInputElement
+				const input = document.querySelector('[data-testid="file-input"]') as HTMLInputElement
 				return {
 					files: input?.files ? Array.from(input.files).map(f => ({ name: f.name, type: f.type, size: f.size })) : null,
 					value: input?.value
@@ -275,7 +270,7 @@ test.describe('Training Flow', () => {
 
 			// Dispatch change event
 			await page.evaluate(() => {
-				const input = document.querySelector('input[type="file"]')
+				const input = document.querySelector('[data-testid="file-input"]')
 				if (input) {
 					console.log('Dispatching change event')
 					const event = new Event('change', { bubbles: true, cancelable: true })
@@ -416,8 +411,8 @@ test.describe('Training Flow', () => {
 				// Wait for UI updates after successful submission
 				console.log('Waiting for UI updates...')
 				await Promise.all([
-					page.waitForSelector('[data-testid="past-samples"]', { timeout: 10000 }),
-					page.waitForSelector('[data-testid="train-button"]', { timeout: 10000 })
+					page.getByTestId('past-samples').waitFor({ timeout: 10000 }),
+					page.getByTestId('train-button').waitFor({ timeout: 10000 })
 				])
 				console.log('UI updates complete')
 
@@ -440,11 +435,10 @@ test.describe('Training Flow', () => {
 
 				// Wait for audio elements with explicit count check
 				console.log('Waiting for audio elements...')
-				const audioLocator = page.locator('[data-testid="past-samples"] audio')
-				await expect(audioLocator).toHaveCount(2, { timeout: 10000 })
+				const audioElements = page.getByTestId('past-samples').locator('audio')
+				await expect(audioElements).toHaveCount(2, { timeout: 10000 })
 
 				// Verify audio elements
-				const audioElements = page.locator('[data-testid="past-samples"] audio')
 				const count = await audioElements.count()
 				console.log(`Found ${count} audio elements`)
 				
@@ -480,7 +474,7 @@ test.describe('Training Flow', () => {
 
 	test('should allow deleting training files', async ({ page }) => {
 		// Upload a file
-		await page.setInputFiles('input[type="file"]', testAudioPath)
+		await page.getByTestId('file-input').setInputFiles(testAudioPath)
 		
 		// Wait for file selection UI updates
 		await expect(page.getByTestId('file-count')).toBeVisible()
@@ -491,7 +485,7 @@ test.describe('Training Flow', () => {
 		await expect(trainButton).toBeEnabled()
 		
 		// Click and wait for response
-		const [response] = await Promise.all([
+		await Promise.all([
 			page.waitForResponse(response => 
 				response.url().includes('/training') && 
 				response.request().method() === 'POST'
@@ -516,7 +510,7 @@ test.describe('Training Flow', () => {
 		])
 		
 		// Verify file is removed from UI
-		await expect(page.locator('[data-testid="past-samples"] audio')).toHaveCount(0)
+		await expect(page.getByTestId('past-samples').locator('audio')).toHaveCount(0)
 		
 		// Verify in database
 		const remainingFiles = await prisma.trainingAudio.findMany({
@@ -533,7 +527,7 @@ test.describe('Training Flow', () => {
 
 		try {
 			// Upload MP3 file
-			await page.setInputFiles('input[type="file"]', mp3Path)
+			await page.getByTestId('file-input').setInputFiles(mp3Path)
 			
 			// Wait for error message to appear
 			await expect(page.getByTestId('file-error')).toBeVisible()
@@ -554,7 +548,7 @@ test.describe('Training Flow', () => {
 
 	test('should generate audio after training', async ({ page }) => {
 		// Upload a file
-		await page.setInputFiles('input[type="file"]', testAudioPath)
+		await page.getByTestId('file-input').setInputFiles(testAudioPath)
 		
 		// Wait for file selection UI updates
 		await expect(page.getByTestId('file-count')).toBeVisible()
@@ -565,7 +559,7 @@ test.describe('Training Flow', () => {
 		await expect(trainButton).toBeEnabled()
 		
 		// Click and wait for response
-		const [response] = await Promise.all([
+		await Promise.all([
 			page.waitForResponse(response => 
 				response.url().includes('/training') && 
 				response.request().method() === 'POST'
@@ -587,10 +581,10 @@ test.describe('Training Flow', () => {
 		])
 		
 		// Verify generated audio appears
-		await expect(page.locator('[data-testid="generated-audio"] audio')).toBeVisible()
+		await expect(page.getByTestId('generated-audio').locator('audio')).toBeVisible()
 		
 		// Verify audio source is set
-		const audioSrc = await page.locator('[data-testid="generated-audio"] audio').getAttribute('src')
+		const audioSrc = await page.getByTestId('generated-audio').locator('audio').getAttribute('src')
 		expect(audioSrc).toMatch(/\/audio-uploads\/.*\.wav/)
 	})
 
@@ -621,7 +615,7 @@ test.describe('Training Flow', () => {
 
 	test('should handle file upload', async ({ page }) => {
 		// Upload the test file
-		await page.setInputFiles('input[type="file"]', testAudioPath)
+		await page.getByTestId('file-input').setInputFiles(testAudioPath)
 
 		// Verify file selection
 		await expect(page.getByTestId('file-count')).toBeVisible()
@@ -632,7 +626,7 @@ test.describe('Training Flow', () => {
 		console.log('Starting training process test')
 		
 		// Find and verify the file input exists
-		const fileInput = page.locator('input[type="file"]')
+		const fileInput = page.getByTestId('file-input')
 		await expect(fileInput).toBeVisible()
 		console.log('File input found')
 		
@@ -650,8 +644,6 @@ test.describe('Training Flow', () => {
 		await expect(trainButton).toBeEnabled()
 		console.log('Train button is enabled')
 		
-		// Start watching for navigation and network requests
-		const navigationPromise = page.waitForURL(/\/training/)
 		let lastResponseBody = ''
 		
 		// Listen for all responses to catch errors
