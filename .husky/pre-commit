@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# Format code first and stage the changes
-npm run format
+# Format code first and stage the changes, excluding .venv
+npm run format -- --ignore-path .prettierignore
 git add .
 
 # Then run linting and type checking

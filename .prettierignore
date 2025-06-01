@@ -1,4 +1,30 @@
-node_modules
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Node modules and build artifacts
+node_modules/
+build/
+dist/
+
+# Generated files
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
 
 /build
 /public/build
@@ -13,3 +39,6 @@ node_modules
 /prisma/migrations
 
 package-lock.json
+
+# Model directory
+/model/
