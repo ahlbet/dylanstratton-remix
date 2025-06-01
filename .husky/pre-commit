@@ -9,5 +9,9 @@ git add .
 npm run lint
 npm run typecheck
 
-# Finally run tests
+# Run both JavaScript and Python tests
+echo "Running JavaScript tests..."
 npm run test
+
+echo "Running Python tests..."
+npm run pytest
