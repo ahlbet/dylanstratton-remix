@@ -134,12 +134,32 @@ class DiffWave(nn.Module):
         device = clean.device
         # sample random timesteps
         t = torch.randint(0, self.timesteps, (b,), device=device)
-        # gather alpha_hat
-        a_hat = self.alpha_hat[t][:, None, None]
         noise = torch.randn_like(clean)
-        x_t = torch.sqrt(a_hat) * clean + torch.sqrt(1 - a_hat) * noise
-        pred_noise = self.forward(x_t, t, mel)
-        return nn.functional.mse_loss(pred_noise, noise)
+        # # gather alpha_hat
+        # a_hat = self.alpha_hat[t][:, None, None]
+        # noise = torch.randn_like(clean)
+        # x_t = torch.sqrt(a_hat) * clean + torch.sqrt(1 - a_hat) * noise
+        # pred_noise = self.forward(x_t, t, mel)
+        # 2) Produce x_t via the forward diffusion q(x_t | x_0)
+        sqrt_alpha_hat = torch.sqrt(self.alpha_hat[t])[:, None, None]
+        sqrt_one_minus_alpha_hat = torch.sqrt(1 - self.alpha_hat[t])[:, None, None]
+        x_t = sqrt_alpha_hat * clean + sqrt_one_minus_alpha_hat * noise
+
+        # 3) Predict ε̂ from x_t
+        eps_pred = self.forward(x_t, t, mel)  # [B,1,L]
+
+        # 4) Diffusion loss (standard MSE)
+        loss_diff = nn.functional.mse_loss(eps_pred, noise)
+
+        # 5) Reconstruct x̂₀ and compute L1 loss
+        #    \hat x0 = (x_t - sqrt(1-α̂_t) * ε̂) / sqrt(α̂_t)
+        x0_pred = (x_t - sqrt_one_minus_alpha_hat * eps_pred) / sqrt_alpha_hat
+        loss_recon = nn.functional.l1_loss(x0_pred, clean)
+
+        # 6) Combine
+        labma_recon = 0.1  # you can tune this weight (e.g. 0.01–1.0)
+        loss = loss_diff + labma_recon * loss_recon
+        return loss
 
     @torch.no_grad()
     def inference(self, seq_len, mel):

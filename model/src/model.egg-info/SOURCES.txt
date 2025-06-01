@@ -11,3 +11,8 @@ src/scripts/generate_diffwave.py
 src/scripts/preprocess_audio.py
 src/scripts/split_audio.py
 src/scripts/train.py
+tests/test_config.py
+tests/test_dataset.py
+tests/test_diffwave_model.py
+tests/test_model.py
+tests/test_utils.py
