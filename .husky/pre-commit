@@ -1,8 +1,9 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# Format code first
+# Format code first and stage the changes
 npm run format
+git add .
 
 # Then run linting and type checking
 npm run lint

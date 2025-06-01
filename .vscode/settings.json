@@ -12,17 +12,17 @@
 		"*.db": "sqlite-viewer.view"
 	},
 	"python.autoComplete.extraPaths": [
-    "${workspaceFolder}",
-    "${workspaceFolder}/src"
-  ],
-  "python.analysis.extraPaths": [
-    "${workspaceFolder}",
-    "${workspaceFolder}/src"
-  ],
+		"${workspaceFolder}",
+		"${workspaceFolder}/src"
+	],
+	"python.analysis.extraPaths": [
+		"${workspaceFolder}",
+		"${workspaceFolder}/src"
+	],
 	"[python]": {
 		"diffEditor.ignoreTrimWhitespace": false,
 		"editor.defaultColorDecorators": "never",
 		"editor.formatOnSave": true,
 		"editor.wordBasedSuggestions": "off"
-	},	
+	}
 }

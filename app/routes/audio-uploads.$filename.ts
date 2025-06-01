@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import  { type LoaderFunctionArgs } from '@remix-run/server-runtime'
+import { type LoaderFunctionArgs } from '@remix-run/server-runtime'
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const filename = params.filename
@@ -19,15 +19,15 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		if (!rangeHeader) {
 			// No range requested, serve the whole file
 			const file = await fs.readFile(filePath)
-	
+
 			return new Response(file, {
 				status: 200,
 				headers: {
 					'Content-Type': 'audio/wav',
 					'Content-Length': fileSize.toString(),
 					'Accept-Ranges': 'bytes',
-					'Cache-Control': 'no-cache'
-				}
+					'Cache-Control': 'no-cache',
+				},
 			})
 		}
 
@@ -38,13 +38,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				status: 416,
 				headers: {
 					'Content-Range': `bytes */${fileSize}`,
-					'Accept-Ranges': 'bytes'
-				}
+					'Accept-Ranges': 'bytes',
+				},
 			})
 		}
 
 		const [, startStr, endStr] = matches
-		
+
 		// Handle special cases for range requests
 		let start = startStr ? parseInt(startStr, 10) : 0
 		let end = endStr ? parseInt(endStr, 10) : fileSize - 1
@@ -59,8 +59,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				status: 416,
 				headers: {
 					'Content-Range': `bytes */${fileSize}`,
-					'Accept-Ranges': 'bytes'
-				}
+					'Accept-Ranges': 'bytes',
+				},
 			})
 		}
 
@@ -71,10 +71,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		try {
 			const buffer = Buffer.alloc(contentLength)
 			const { bytesRead } = await handle.read(buffer, 0, contentLength, start)
-			
+
 			// Even if we read fewer bytes, we'll still return what we have
 			const actualEnd = start + bytesRead - 1
-			
+
 			return new Response(buffer.slice(0, bytesRead), {
 				status: 206,
 				headers: {
@@ -82,8 +82,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 					'Content-Length': bytesRead.toString(),
 					'Content-Range': `bytes ${start}-${actualEnd}/${fileSize}`,
 					'Accept-Ranges': 'bytes',
-					'Cache-Control': 'no-cache'
-				}
+					'Cache-Control': 'no-cache',
+				},
 			})
 		} finally {
 			await handle.close()
@@ -94,4 +94,4 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		}
 		throw error
 	}
-} 
+}
