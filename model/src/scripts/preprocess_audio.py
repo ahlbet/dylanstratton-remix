@@ -26,7 +26,7 @@ OUTPUT_DIR = Path("data/processed")
 SAMPLE_RATE = 16000
 TARGET_DURATION = 30.0  # seconds per clip
 TARGET_LEN = int(SAMPLE_RATE * TARGET_DURATION)
-N_AUG = 1  # augmentations per source file
+N_AUG = 4  # augmentations per source file
 
 # Augmentation parameters
 TIME_STRETCH_RANGE = (0.8, 1.2)  # +/-10%

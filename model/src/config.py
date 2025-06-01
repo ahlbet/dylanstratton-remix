@@ -15,7 +15,7 @@ LAMBDA_GP = 10
 
 # Progressive curriculum: (stage_name, duration_s, epochs)
 CURRICULUM = [
-    ("stage1s", 1, 100),
+    ("stage1s", 1, 5000),
     # ("stage2s", 2, 20),
     # ("stage4s", 4, 10),
 ]

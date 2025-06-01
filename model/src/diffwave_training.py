@@ -20,12 +20,15 @@ from torch.utils.tensorboard import SummaryWriter
 from glob import glob
 import re
 
-writer = SummaryWriter(log_dir="logs/diffwave")
 
-
-def train_diffwave():
+def train_diffwave(checkpoint_dir=None):
+    if checkpoint_dir is not None:
+        global CHECKPOINT_DIR
+        CHECKPOINT_DIR = checkpoint_dir
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     os.makedirs(GENERATED_DIR, exist_ok=True)
+
+    writer = SummaryWriter(log_dir=os.path.join("logs", CHECKPOINT_DIR))
 
     model_config = {
         "timesteps": 1000,
@@ -62,40 +65,54 @@ def train_diffwave():
         dataset = AudioDataset(PROCESSED_DATA_DIR, seq_len)
         loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
         for epoch in tqdm(range(done, epochs + done), desc=f"Stage {stage_name}"):
-            for clean in tqdm(loader, desc=f"{stage_name} Epoch {epoch}"):
-                clean = clean.to(DEVICE)
-                loss = model.compute_loss(clean)
+            ckpt = os.path.join(CHECKPOINT_DIR, f"DW_{stage_name}_e{epoch}.pt")
+            saved_mel = None
+            for clean, mel in tqdm(loader, desc=f"{stage_name} Epoch {epoch}"):
+                clean, mel = clean.to(DEVICE), mel.to(DEVICE)
+                saved_mel = mel
+                loss = model.compute_loss(clean, mel)
                 optimizer.zero_grad()
                 with autocast(device_type=DEVICE.type, dtype=torch.float16):
                     # Forward pass
-                    loss = model.compute_loss(clean)
+                    loss = model.compute_loss(clean, mel)
                 scaler.scale(loss).backward()
                 scaler.step(optimizer)
                 scaler.update()
-            # Save checkpoint and generate sample
-            ckpt = os.path.join(CHECKPOINT_DIR, f"DW_{stage_name}_e{epoch}.pt")
-            torch.save(model.state_dict(), ckpt)
-            if epoch % 5 == 0 or epoch == epochs - 1:
+
+            if epoch % 2 == 0 or epoch == epochs - 1:
                 print(f"Saving checkpoint to {ckpt}")
                 with torch.no_grad():
-                    sample = model.inference(seq_len)
+                    sample = model.inference(seq_len, saved_mel)
+                # Ensure we have [channels, samples] for saving
+                audio_save = sample.cpu().squeeze().view(1, -1)  # Force to [1, seq_len]
+
+                # Save WAV file - keep original values
                 torchaudio.save(
-                    os.path.join(GENERATED_DIR, f"dw_{stage_name}_e{epoch}.wav"),
-                    sample.cpu().squeeze(0),
+                    os.path.join(
+                        GENERATED_DIR, CHECKPOINT_DIR, f"dw_{stage_name}_e{epoch}.wav"
+                    ),
+                    audio_save,
                     SAMPLE_RATE,
                 )
+
+                # For tensorboard, normalize to [-1, 1] range
+                audio_norm = audio_save.clamp(-1, 1)  # Ensure values are in [-1, 1]
                 writer.add_audio(
-                    f"sample/{stage_name}_epoch_{epoch}",
-                    sample.cpu().squeeze(0),
+                    os.path.join(CHECKPOINT_DIR, f"sample/{stage_name}_epoch_{epoch}"),
+                    audio_norm,
                     global_step=epoch,
                     sample_rate=SAMPLE_RATE,
                 )
+            # Save checkpoint and generate sample
+            torch.save(model.state_dict(), ckpt)
+
             print(f"Stage {stage_name} Epoch {epoch}: loss={loss.item():.4f}")
             writer.add_scalar(f"loss/{stage_name}", loss.item(), epoch)
             writer.flush()
 
+    writer.close()
+
 
 if __name__ == "__main__":
     train_diffwave()
-    writer.close()
     print("Training complete. Checkpoints and samples saved.")

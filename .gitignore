@@ -30,6 +30,8 @@ node_modules
 /model/data/*
 /model/generated/*
 /model/checkpoints/*
+/model/checkpoints_v3/*
+/model/checkpoints_v2/*
 
 # Test Audio Files
 /public/audio-uploads/*

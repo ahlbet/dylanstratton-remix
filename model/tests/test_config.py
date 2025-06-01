@@ -27,8 +27,8 @@ def test_curriculum_format():
 
 def test_device_string():
     assert isinstance(DEVICE, torch.device)
-    assert str(DEVICE) in ("cpu", "cuda") or str(DEVICE).startswith("cuda:"), (
-        "DEVICE should be 'cpu', 'cuda', or 'cuda:N'"
+    assert str(DEVICE) in ("cpu", "cuda", "mps") or str(DEVICE).startswith("cuda:"), (
+        "DEVICE should be 'cpu', 'cuda', 'mps', or 'cuda:N'"
     )
 
 

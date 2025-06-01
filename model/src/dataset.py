@@ -1,4 +1,5 @@
 import os
+import torch
 import torch.nn as nn
 import torchaudio
 from torch.utils.data import Dataset
@@ -11,7 +12,7 @@ from config import PROCESSED_DATA_DIR, SAMPLE_RATE
 
 
 class AudioDataset(Dataset):
-    def __init__(self, folder, seq_len):
+    def __init__(self, folder, seq_len, n_mels=80, hop_length=200, n_fft=1024):
         self.seq_len = seq_len
         self.paths = glob(os.path.join(folder, "**/*.wav"), recursive=True)
         self.files = []
@@ -22,6 +23,11 @@ class AudioDataset(Dataset):
             else:
                 print(f"⚠️  Skipping bad file: {p}")
         self.resample = Resample(orig_freq=44100, new_freq=SAMPLE_RATE)
+
+        self.mel_transform = torchaudio.transforms.MelSpectrogram(
+            sample_rate=SAMPLE_RATE, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels
+        )
+        self.hop_length = hop_length
 
     def _quick_load(self, path):
         # load, resample, mono, pad/trim—same as your process_file but minimal
@@ -61,5 +67,22 @@ class AudioDataset(Dataset):
             wav = nn.functional.pad(wav, (0, pad_len))
         else:
             wav = wav[:, : self.seq_len]
-        wav = wav / wav.abs().max()
-        return wav
+        wav = wav / wav.abs().max()  # normalize
+
+        # Generate mel spectrogram
+        mel = self.mel_transform(
+            wav.squeeze(0)
+        )  # Remove channel dim before mel transform
+        # Convert to log-scale
+        mel = torch.log1p(mel)  # [n_mels, T]
+
+        # Interpolate mel to fixed time dimension
+        target_length = self.seq_len // self.hop_length
+        mel = torch.nn.functional.interpolate(
+            mel.unsqueeze(0),  # [1, n_mels, T]
+            size=target_length,
+            mode="linear",
+            align_corners=False,
+        ).squeeze(0)  # [n_mels, target_length]
+
+        return wav, mel  # [1, L], [n_mels, T]

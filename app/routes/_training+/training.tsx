@@ -11,7 +11,6 @@ import {
 	useNavigation,
 	useActionData,
 	useLoaderData,
-	useRevalidator,
 } from 'react-router'
 
 import { AudioPlayer as ClientAudioPlayer } from '#app/components/audio-player.client.tsx'
